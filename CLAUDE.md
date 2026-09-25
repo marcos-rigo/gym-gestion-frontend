@@ -24,4 +24,4 @@ Frontend for a gym-management system; it talks to a separate REST backend at `NE
 - **Auth**: `contexts/auth-context.tsx` (`AuthProvider` / `useAuth`) holds `usuario`, `permisos`, and `esAdmin`. Session lives in `localStorage` (`token`, `usuario`); validity is checked client-side by decoding the JWT `exp` (`lib/auth.js`). Permissions come from `getMisPermisos()` in `services/roles`.
 - **Access control is client-side only**: `app/dashboard/layout.tsx` redirects unauthenticated users to `/login`; `components/role-guard.tsx` (`<RoleGuard requiredPermission="...">`) gates pages by permission string (admins bypass). Roles are dynamic (`Role` with `permissions[]`), while `Usuario.rol` is the fixed enum `dueno | recepcion | profesor`.
 - **Pages vs. modules**: `app/dashboard/*/page.tsx` are thin; the real UI lives in `components/*-module.tsx` (list/table + actions) with companion `*-form-dialog.tsx` / detail dialogs. `components/ui/` is shadcn-generated — add components via the `shadcn` CLI rather than hand-writing.
-- `app/page.tsx` is still the create-next-app placeholder.
+- `app/page.tsx` just redirects `/` to `/login`.
