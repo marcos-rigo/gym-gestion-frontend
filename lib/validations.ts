@@ -126,6 +126,16 @@ export const cobroSchema = z.object({
 
 export type CobroFormValues = z.infer<typeof cobroSchema>
 
+export const anularPagoSchema = z.object({
+  motivo: z
+    .string()
+    .trim()
+    .min(3, "El motivo debe tener al menos 3 caracteres")
+    .max(300, "El motivo no puede superar los 300 caracteres"),
+})
+
+export type AnularPagoFormValues = z.infer<typeof anularPagoSchema>
+
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().min(1, "El email es obligatorio").email("Ingresá un email válido"),
   password: z.string().min(1, "La contraseña es obligatoria"),

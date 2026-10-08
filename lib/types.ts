@@ -39,3 +39,32 @@ export interface Role {
     esAdmin: boolean
     createdAt: string
 }
+
+export interface Pago {
+    id: string
+    clienteId: string
+    clienteNombreCompleto: string
+    clienteDni: string
+    usuarioId: string | null
+    usuarioNombre: string
+    monto: number
+    metodo: "efectivo" | "tarjeta" | "transferencia"
+    periodoDesde: string
+    periodoHasta: string
+    fechaPago: string
+    anulado: boolean
+    anuladoAt: string | null
+    anuladoPorNombre: string
+    motivoAnulacion: string
+}
+
+export interface StatsFacturacion {
+    hoy: number
+    ayer: number
+    semana: number
+    semanaAnterior: number
+    mes: number
+    mesAnterior: number
+    cantidadPagosMes: number
+    ticketPromedioMes: number
+}

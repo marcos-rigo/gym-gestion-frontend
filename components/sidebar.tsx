@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, LogOut, Menu, Shield, UserCog, Users, X } from "lucide-react"
+import { LayoutDashboard, LogOut, Menu, Receipt, Shield, UserCog, Users, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
@@ -18,6 +18,7 @@ const menuItems: {
 }[] = [
   { label: "Dashboard", href: RUTAS_PROTEGIDAS.DASHBOARD.href, icon: LayoutDashboard, ruta: RUTAS_PROTEGIDAS.DASHBOARD },
   { label: "Clientes", href: RUTAS_PROTEGIDAS.CLIENTES.href, icon: Users, ruta: RUTAS_PROTEGIDAS.CLIENTES },
+  { label: "Facturación", href: RUTAS_PROTEGIDAS.FACTURACION.href, icon: Receipt, ruta: RUTAS_PROTEGIDAS.FACTURACION },
   { label: "Usuarios", href: RUTAS_PROTEGIDAS.USUARIOS.href, icon: UserCog, ruta: RUTAS_PROTEGIDAS.USUARIOS },
   { label: "Roles", href: RUTAS_PROTEGIDAS.ROLES.href, icon: Shield, ruta: RUTAS_PROTEGIDAS.ROLES },
 ]
