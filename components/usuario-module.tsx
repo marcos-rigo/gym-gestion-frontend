@@ -1,9 +1,18 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Loader2, Pencil, Plus, Search } from "lucide-react"
+import { Loader2, Lock, Pencil, Plus, Search, Trash2 } from "lucide-react"
 
 import { UsuarioFormDialog } from "@/components/usuario-form-dialog"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -19,21 +28,12 @@ import {
 } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
 import type { Usuario } from "@/lib/types"
-import { getUsuarios, toggleActivoUsuario } from "@/services/usuarios"
+import { deleteUsuario, getUsuarios, toggleActivoUsuario } from "@/services/usuarios"
 
 const PAGE_SIZE = 10
 
-const rolBadgeClass: Record<Usuario["rol"], string> = {
-  dueno: "border border-lime/30 bg-lime/15 text-lime-dark",
-  recepcion: "border border-blue-200 bg-blue-100 text-blue-700",
-  profesor: "border border-gray-200 bg-gray-100 text-gray-700",
-}
-
-const rolLabel: Record<Usuario["rol"], string> = {
-  dueno: "Dueño",
-  recepcion: "Recepción",
-  profesor: "Profesor",
-}
+const adminBadgeClass = "border border-lime/30 bg-lime/15 text-lime-dark"
+const rolBadgeClass = "border border-gray-200 bg-gray-100 text-gray-700"
 
 export function UsuarioModule() {
   const { toast } = useToast()
@@ -44,6 +44,8 @@ export function UsuarioModule() {
   const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null)
   const [showCreateUsuario, setShowCreateUsuario] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [deletingUsuario, setDeletingUsuario] = useState<Usuario | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   // loading arranca en true; los refrescos posteriores no vuelven a mostrar el spinner
   const fetchAll = useCallback(
@@ -78,6 +80,7 @@ export function UsuarioModule() {
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   async function handleToggleActivo(usuario: Usuario) {
+    if (usuario.protegido) return
     setTogglingId(usuario.id)
     try {
       await toggleActivoUsuario(usuario.id)
@@ -92,6 +95,26 @@ export function UsuarioModule() {
       })
     } finally {
       setTogglingId(null)
+    }
+  }
+
+  async function handleDelete() {
+    if (!deletingUsuario) return
+    setDeleteLoading(true)
+    try {
+      await deleteUsuario(deletingUsuario.id)
+      toast({ title: "Usuario eliminado", description: deletingUsuario.nombre })
+      setDeletingUsuario(null)
+      await fetchAll()
+    } catch (err) {
+      toast({
+        title: "No se pudo eliminar el usuario",
+        description: err instanceof Error ? err.message : "Error desconocido",
+        variant: "destructive",
+      })
+      setDeletingUsuario(null)
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -149,19 +172,36 @@ export function UsuarioModule() {
               ) : (
                 paginated.map((usuario) => (
                   <TableRow key={usuario.id}>
-                    <TableCell className="font-medium">{usuario.nombre}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {usuario.nombre}
+                        {usuario.protegido && (
+                          <Badge
+                            variant="outline"
+                            className="gap-1 border-gray-200 bg-gray-100 text-gray-600"
+                          >
+                            <Lock className="size-3" />
+                            Protegido
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{usuario.email}</TableCell>
                     <TableCell>
-                      <Badge className={rolBadgeClass[usuario.rol]}>{rolLabel[usuario.rol]}</Badge>
+                      <Badge className={usuario.esAdmin ? adminBadgeClass : rolBadgeClass}>
+                        {usuario.rolDescripcion}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Switch
-                          checked={usuario.activo}
-                          disabled={togglingId === usuario.id}
-                          onCheckedChange={() => handleToggleActivo(usuario)}
-                          aria-label={usuario.activo ? "Desactivar usuario" : "Activar usuario"}
-                        />
+                        {!usuario.protegido && (
+                          <Switch
+                            checked={usuario.activo}
+                            disabled={togglingId === usuario.id}
+                            onCheckedChange={() => handleToggleActivo(usuario)}
+                            aria-label={usuario.activo ? "Desactivar usuario" : "Activar usuario"}
+                          />
+                        )}
                         <span className="text-sm text-muted-foreground">
                           {usuario.activo ? "Activo" : "Inactivo"}
                         </span>
@@ -169,14 +209,27 @@ export function UsuarioModule() {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Editar usuario"
-                          onClick={() => setEditingUsuario(usuario)}
-                        >
-                          <Pencil />
-                        </Button>
+                        {!usuario.protegido && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Editar usuario"
+                              onClick={() => setEditingUsuario(usuario)}
+                            >
+                              <Pencil />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Eliminar usuario"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeletingUsuario(usuario)}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -226,6 +279,28 @@ export function UsuarioModule() {
         onSuccess={fetchAll}
         initialData={editingUsuario}
       />
+
+      <AlertDialog
+        open={deletingUsuario !== null}
+        onOpenChange={(open) => !open && !deleteLoading && setDeletingUsuario(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará a <strong>{deletingUsuario?.nombre}</strong> de forma permanente.
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>Cancelar</AlertDialogCancel>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteLoading}>
+              {deleteLoading && <Loader2 className="animate-spin" />}
+              Eliminar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

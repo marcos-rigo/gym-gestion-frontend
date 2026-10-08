@@ -1,7 +1,9 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
-import { Loader2 } from "lucide-react"
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { Eye, EyeOff, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,23 +17,31 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
+import { loginSchema, type LoginFormValues } from "@/lib/validations"
 
 export default function LoginPage() {
   const { login } = useAuth()
   const { toast } = useToast()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  })
+
+  async function onSubmit(values: LoginFormValues) {
     setLoading(true)
-    const result = await login(email, password)
+    const result = await login(values.email, values.password)
     setLoading(false)
     if (!result.success) {
       toast({
         title: "Error al iniciar sesión",
-        description: result.error,
+        description: result.error ?? "Verificá tu email y contraseña e intentá de nuevo.",
         variant: "destructive",
       })
     }
@@ -49,28 +59,48 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="grid gap-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                {...register("email")}
+                aria-invalid={!!errors.email}
                 className="border-white/20 bg-white/5 placeholder:text-gray-500"
-                required
               />
+              {errors.email && (
+                <p className="text-sm text-red-400">{errors.email.message}</p>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="border-white/20 bg-white/5 placeholder:text-gray-500"
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  {...register("password")}
+                  aria-invalid={!!errors.password}
+                  className="border-white/20 bg-white/5 pr-9 placeholder:text-gray-500"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  tabIndex={-1}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  className="absolute right-0.5 top-1/2 -translate-y-1/2 text-gray-400 hover:bg-white/10 hover:text-white"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? <EyeOff /> : <Eye />}
+                </Button>
+              </div>
+              {errors.password && (
+                <p className="text-sm text-red-400">{errors.password.message}</p>
+              )}
             </div>
             <Button type="submit" disabled={loading} className="mt-2">
               {loading && <Loader2 className="animate-spin" />}

@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Eye,
   Loader2,
@@ -8,7 +9,6 @@ import {
   Plus,
   Search,
   Trash2,
-  User,
   UserCheck,
   UserX,
   Users,
@@ -37,45 +37,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
+import { PERMISOS } from "@/lib/permissions"
 import type { Cliente } from "@/lib/types"
-import { cn, formatDate } from "@/lib/utils"
+import { formatDate } from "@/lib/utils"
 import { deleteCliente, getClientes } from "@/services/clientes"
 
 const PAGE_SIZE = 10
 
-const estadoCuotaBadgeClass: Record<NonNullable<Cliente["estadoCuota"]>, string> = {
-  al_dia: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  por_vencer: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
-  moroso: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
-}
-
-const estadoCuotaLabel: Record<NonNullable<Cliente["estadoCuota"]>, string> = {
-  al_dia: "Al día",
-  por_vencer: "Por vencer",
-  moroso: "Moroso",
-}
-
-function EstadoCuotaBadge({ cliente }: { cliente: Cliente }) {
-  const { estadoCuota, estado } = cliente
-
-  if (estadoCuota === null) {
-    return (
-      <Badge className="bg-gray-200 text-gray-700 capitalize dark:bg-gray-800 dark:text-gray-300">
-        {estado}
-      </Badge>
-    )
-  }
-
-  return (
-    <Badge className={cn(estadoCuotaBadgeClass[estadoCuota])}>
-      {estadoCuotaLabel[estadoCuota]}
-    </Badge>
-  )
-}
-
 export function ClienteModule() {
   const { toast } = useToast()
+  const { esAdmin, permisos } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const puedeCrear = esAdmin || permisos.includes(PERMISOS.CLIENTES_CREAR)
+  const puedeEditar = esAdmin || permisos.includes(PERMISOS.CLIENTES_EDITAR)
+  const puedeEliminar = esAdmin || permisos.includes(PERMISOS.CLIENTES_ELIMINAR)
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -105,6 +83,19 @@ export function ClienteModule() {
   useEffect(() => {
     fetchAll()
   }, [fetchAll])
+
+  // Soporta el deep-link que genera "Próximos Vencimientos" del dashboard
+  // (/dashboard/clientes?ver=<id>): abre el detalle y limpia el query param.
+  useEffect(() => {
+    const verId = searchParams.get("ver")
+    if (!verId || clientes.length === 0) return
+    const cliente = clientes.find((c) => c.idCliente === verId)
+    // Sincroniza el diálogo con el query param que llega desde afuera (dashboard);
+    // no es una cascada de estado derivado de este mismo componente.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (cliente) setViewingCliente(cliente)
+    router.replace("/dashboard/clientes")
+  }, [searchParams, clientes, router])
 
   const filtered = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
@@ -159,10 +150,12 @@ export function ClienteModule() {
           <h1 className="text-2xl font-semibold tracking-tight">Clientes</h1>
           <p className="text-sm text-muted-foreground">Gestioná los socios del gimnasio.</p>
         </div>
-        <Button onClick={() => setShowCreateCliente(true)}>
-          <Plus />
-          Nuevo Cliente
-        </Button>
+        {puedeCrear && (
+          <Button onClick={() => setShowCreateCliente(true)}>
+            <Plus />
+            Nuevo Cliente
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -259,23 +252,27 @@ export function ClienteModule() {
                         >
                           <Eye />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Editar cliente"
-                          onClick={() => setEditingCliente(cliente)}
-                        >
-                          <Pencil />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Eliminar cliente"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setDeletingCliente(cliente)}
-                        >
-                          <Trash2 />
-                        </Button>
+                        {puedeEditar && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Editar cliente"
+                            onClick={() => setEditingCliente(cliente)}
+                          >
+                            <Pencil />
+                          </Button>
+                        )}
+                        {puedeEliminar && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Eliminar cliente"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setDeletingCliente(cliente)}
+                          >
+                            <Trash2 />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

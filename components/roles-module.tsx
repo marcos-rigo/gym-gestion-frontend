@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { Eye, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react"
 
 import { RoleFormDialog } from "@/components/role-form-dialog"
 import {
@@ -25,13 +25,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
+import { PERMISOS } from "@/lib/permissions"
 import type { Role } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { deleteRol, getRoles } from "@/services/roles"
 
 export function RolesModule() {
   const { toast } = useToast()
+  const { esAdmin, permisos } = useAuth()
+  const puedeCrear = esAdmin || permisos.includes(PERMISOS.ROLES_CREAR)
+  const puedeEditar = esAdmin || permisos.includes(PERMISOS.ROLES_EDITAR)
+  const puedeEliminar = esAdmin || permisos.includes(PERMISOS.ROLES_ELIMINAR)
   const [roles, setRoles] = useState<Role[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -94,10 +100,12 @@ export function RolesModule() {
           <h1 className="text-2xl font-semibold tracking-tight">Roles</h1>
           <p className="text-sm text-muted-foreground">Definí los roles y sus permisos de acceso.</p>
         </div>
-        <Button onClick={() => setShowCreateRole(true)}>
-          <Plus />
-          Nuevo Rol
-        </Button>
+        {puedeCrear && (
+          <Button onClick={() => setShowCreateRole(true)}>
+            <Plus />
+            Nuevo Rol
+          </Button>
+        )}
       </div>
 
       <div className="relative max-w-sm">
@@ -155,28 +163,33 @@ export function RolesModule() {
                     <TableCell>{role.userCount}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Editar rol"
-                          onClick={() => setEditingRole(role)}
-                        >
-                          <Pencil />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Eliminar rol"
-                          className={cn(
-                            "text-destructive hover:text-destructive",
-                            role.esAdmin && "opacity-50"
-                          )}
-                          disabled={role.esAdmin}
-                          title={role.esAdmin ? "El rol Admin no se puede eliminar" : undefined}
-                          onClick={() => setDeletingRole(role)}
-                        >
-                          <Trash2 />
-                        </Button>
+                        {(role.esAdmin || puedeEditar) && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={role.esAdmin ? "Ver rol" : "Editar rol"}
+                            title={role.esAdmin ? "Ver rol" : undefined}
+                            onClick={() => setEditingRole(role)}
+                          >
+                            {role.esAdmin ? <Eye /> : <Pencil />}
+                          </Button>
+                        )}
+                        {puedeEliminar && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Eliminar rol"
+                            className={cn(
+                              "text-destructive hover:text-destructive",
+                              role.esAdmin && "opacity-50"
+                            )}
+                            disabled={role.esAdmin}
+                            title={role.esAdmin ? "El rol Admin no se puede eliminar" : undefined}
+                            onClick={() => setDeletingRole(role)}
+                          >
+                            <Trash2 />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

@@ -83,6 +83,9 @@ export function ClienteDetailDialog({
   }, [clienteId])
 
   useEffect(() => {
+    // fetchPagos sincroniza con el backend (sistema externo) al abrir el dialog;
+    // el estado que termina seteando es async, no una cascada síncrona.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (open && puedeVerPagos) fetchPagos()
   }, [open, puedeVerPagos, fetchPagos])
 

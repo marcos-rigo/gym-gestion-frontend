@@ -1,0 +1,1 @@
+{"version":10,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.64.0","options":{},"platform":"win32","wallTime":1791434813822,"monotonicTime":393612.674,"sdkLanguage":"javascript","title":"login.spec.ts:53 › Login › un usuario sin estadisticas_ver (pero con clientes_ver) cae directo en /dashboard/clientes"}

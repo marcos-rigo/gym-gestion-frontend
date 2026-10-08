@@ -16,3 +16,7 @@ export function updateUsuario(id, data) {
 export function toggleActivoUsuario(id) {
   return apiClient(`/usuarios/${id}/toggle-activo`, { method: 'PATCH' })
 }
+
+export function deleteUsuario(id) {
+  return apiClient(`/usuarios/${id}`, { method: 'DELETE' })
+}

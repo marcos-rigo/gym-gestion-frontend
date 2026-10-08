@@ -5,7 +5,8 @@ function normalizeRol(raw) {
     idRol: raw.id ?? raw.idRol,
     descripcion: raw.descripcion ?? '',
     permissions: raw.permissions ?? [],
-    userCount: raw.userCount ?? 0,
+    userCount: Number(raw.userCount ?? 0),
+    esAdmin: raw.esAdmin ?? false,
     createdAt: raw.createdAt ?? '',
   }
 }

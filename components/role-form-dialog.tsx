@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
 import { Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -20,34 +19,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import type { Role } from "@/lib/types"
+import { PERMISOS_GYM } from "@/lib/permissions"
+import { aplicarErrorBackend, letrasFilter, roleSchema, withCharFilter, type RoleFormValues } from "@/lib/validations"
 import { createRol, updateRol } from "@/services/roles"
 
-const PERMISOS_GYM = [
-  { id: "clientes_ver", label: "Ver Clientes", category: "Clientes" },
-  { id: "clientes_crear", label: "Crear Clientes", category: "Clientes" },
-  { id: "clientes_editar", label: "Editar Clientes", category: "Clientes" },
-  { id: "clientes_eliminar", label: "Eliminar Clientes", category: "Clientes" },
-  { id: "facturacion_ver", label: "Ver Facturación", category: "Facturación" },
-  { id: "facturacion_cobrar", label: "Registrar Cobros", category: "Facturación" },
-  { id: "usuarios_ver", label: "Ver Usuarios", category: "Usuarios" },
-  { id: "usuarios_crear", label: "Crear Usuarios", category: "Usuarios" },
-  { id: "usuarios_editar", label: "Editar Usuarios", category: "Usuarios" },
-  { id: "usuarios_activar", label: "Activar/Desactivar Usuarios", category: "Usuarios" },
-  { id: "roles_ver", label: "Ver Roles", category: "Roles" },
-  { id: "roles_crear", label: "Crear Roles", category: "Roles" },
-  { id: "roles_editar", label: "Editar Roles", category: "Roles" },
-  { id: "roles_eliminar", label: "Eliminar Roles", category: "Roles" },
-  { id: "estadisticas_ver", label: "Ver Estadísticas", category: "Estadísticas" },
-]
-
 const CATEGORIAS = Array.from(new Set(PERMISOS_GYM.map((p) => p.category)))
-
-const roleSchema = z.object({
-  descripcion: z.string().trim().min(3, "La descripción debe tener al menos 3 caracteres"),
-  permissions: z.array(z.string()).min(1, "Seleccioná al menos un permiso"),
-})
-
-type RoleFormValues = z.infer<typeof roleSchema>
 
 interface RoleFormDialogProps {
   open: boolean
@@ -75,6 +51,7 @@ export function RoleFormDialog({ open, onOpenChange, onSuccess, initialData }: R
     reset,
     watch,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<RoleFormValues>({
     resolver: zodResolver(roleSchema),
@@ -94,7 +71,7 @@ export function RoleFormDialog({ open, onOpenChange, onSuccess, initialData }: R
   }
 
   function toggleCategoria(category: string) {
-    const ids = PERMISOS_GYM.filter((p) => p.category === category).map((p) => p.id)
+    const ids: string[] = PERMISOS_GYM.filter((p) => p.category === category).map((p) => p.id)
     const allSelected = ids.every((id) => selected.includes(id))
     const next = allSelected
       ? selected.filter((id) => !ids.includes(id))
@@ -115,11 +92,7 @@ export function RoleFormDialog({ open, onOpenChange, onSuccess, initialData }: R
       onOpenChange(false)
       onSuccess()
     } catch (err) {
-      toast({
-        title: isEdit ? "Error al actualizar el rol" : "Error al crear el rol",
-        description: err instanceof Error ? err.message : "Error desconocido",
-        variant: "destructive",
-      })
+      aplicarErrorBackend(err, setError, toast, isEdit ? "Error al actualizar el rol" : "Error al crear el rol")
     } finally {
       setLoading(false)
     }
@@ -129,18 +102,25 @@ export function RoleFormDialog({ open, onOpenChange, onSuccess, initialData }: R
     <Dialog open={open} onOpenChange={(value) => !loading && onOpenChange(value)}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Editar Rol" : "Nuevo Rol"}</DialogTitle>
+          <DialogTitle>{isAdmin ? "Ver Rol" : isEdit ? "Editar Rol" : "Nuevo Rol"}</DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Modificá el nombre y los permisos del rol."
-              : "Definí el nombre del rol y los permisos que tendrá."}
+            {isAdmin
+              ? "Este rol es del sistema y solo se puede consultar."
+              : isEdit
+                ? "Modificá el nombre y los permisos del rol."
+                : "Definí el nombre del rol y los permisos que tendrá."}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="descripcion">Nombre del rol *</Label>
-            <Input id="descripcion" {...register("descripcion")} aria-invalid={!!errors.descripcion} />
+            <Input
+              id="descripcion"
+              {...withCharFilter(register("descripcion"), letrasFilter)}
+              disabled={isAdmin}
+              aria-invalid={!!errors.descripcion}
+            />
             {errors.descripcion && (
               <p className="text-sm text-destructive">{errors.descripcion.message}</p>
             )}
@@ -201,12 +181,14 @@ export function RoleFormDialog({ open, onOpenChange, onSuccess, initialData }: R
               onClick={() => onOpenChange(false)}
               disabled={loading}
             >
-              Cancelar
+              {isAdmin ? "Cerrar" : "Cancelar"}
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="animate-spin" />}
-              {loading ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear rol"}
-            </Button>
+            {!isAdmin && (
+              <Button type="submit" disabled={loading}>
+                {loading && <Loader2 className="animate-spin" />}
+                {loading ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear rol"}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

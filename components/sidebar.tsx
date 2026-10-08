@@ -7,13 +7,19 @@ import { LayoutDashboard, LogOut, Menu, Shield, UserCog, Users, X } from "lucide
 
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
+import { puedeAcceder, RUTAS_PROTEGIDAS } from "@/lib/permissions"
 import { cn } from "@/lib/utils"
 
-const menuItems: { label: string; href: string; icon: typeof Users; requiredPermission?: string }[] = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Clientes", href: "/dashboard/clientes", icon: Users, requiredPermission: "clientes_ver" },
-  { label: "Usuarios", href: "/dashboard/usuarios", icon: UserCog, requiredPermission: "usuarios_ver" },
-  { label: "Roles", href: "/dashboard/roles", icon: Shield, requiredPermission: "roles_ver" },
+const menuItems: {
+  label: string
+  href: string
+  icon: typeof Users
+  ruta?: (typeof RUTAS_PROTEGIDAS)[keyof typeof RUTAS_PROTEGIDAS]
+}[] = [
+  { label: "Dashboard", href: RUTAS_PROTEGIDAS.DASHBOARD.href, icon: LayoutDashboard, ruta: RUTAS_PROTEGIDAS.DASHBOARD },
+  { label: "Clientes", href: RUTAS_PROTEGIDAS.CLIENTES.href, icon: Users, ruta: RUTAS_PROTEGIDAS.CLIENTES },
+  { label: "Usuarios", href: RUTAS_PROTEGIDAS.USUARIOS.href, icon: UserCog, ruta: RUTAS_PROTEGIDAS.USUARIOS },
+  { label: "Roles", href: RUTAS_PROTEGIDAS.ROLES.href, icon: Shield, ruta: RUTAS_PROTEGIDAS.ROLES },
 ]
 
 export function Sidebar() {
@@ -22,7 +28,7 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const items = menuItems.filter(
-    (item) => !item.requiredPermission || esAdmin || (permisos ?? []).includes(item.requiredPermission)
+    (item) => !item.ruta || puedeAcceder(item.ruta, { esAdmin, permisos: permisos ?? [] })
   )
 
   return (

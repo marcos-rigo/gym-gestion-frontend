@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useState } from "react"
+import { Controller, useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -24,6 +26,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import type { Cliente } from "@/lib/types"
 import { formatDate } from "@/lib/utils"
+import { aplicarErrorBackend, cobroSchema, montoFilter, withCharFilter, type CobroFormValues } from "@/lib/validations"
 import { registrarPago } from "@/services/pagos"
 
 interface CobroDialogProps {
@@ -33,7 +36,7 @@ interface CobroDialogProps {
   onSuccess: () => void
 }
 
-const DEFAULT_MONTO = "45000"
+const DEFAULT_MONTO = 45000
 
 const metodoOptions = [
   { value: "efectivo", label: "Efectivo" },
@@ -43,39 +46,35 @@ const metodoOptions = [
 
 export function CobroDialog({ cliente, open, onOpenChange, onSuccess }: CobroDialogProps) {
   const { toast } = useToast()
-  const [monto, setMonto] = useState(DEFAULT_MONTO)
-  const [metodo, setMetodo] = useState("efectivo")
   const [loading, setLoading] = useState(false)
   const [prevOpen, setPrevOpen] = useState(open)
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    setError,
+    formState: { errors },
+  } = useForm<CobroFormValues>({
+    resolver: zodResolver(cobroSchema),
+    defaultValues: { monto: DEFAULT_MONTO, metodo: "efectivo" },
+  })
 
   // Al abrir el dialog, reiniciar el formulario
   if (open !== prevOpen) {
     setPrevOpen(open)
-    if (open) {
-      setMonto(DEFAULT_MONTO)
-      setMetodo("efectivo")
-    }
+    if (open) reset({ monto: DEFAULT_MONTO, metodo: "efectivo" })
   }
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
+  async function onSubmit(values: CobroFormValues) {
     if (!cliente) return
-    const montoNumber = Number(monto)
-    if (!montoNumber || montoNumber <= 0) {
-      toast({
-        title: "Monto inválido",
-        description: "Ingresá un monto mayor a cero.",
-        variant: "destructive",
-      })
-      return
-    }
-
     setLoading(true)
     try {
       const res = await registrarPago({
         clienteId: cliente.idCliente,
-        monto: montoNumber,
-        metodo,
+        monto: values.monto,
+        metodo: values.metodo,
       })
       const periodoHasta = res?.periodoHasta ?? res?.data?.periodoHasta
       toast({
@@ -87,11 +86,7 @@ export function CobroDialog({ cliente, open, onOpenChange, onSuccess }: CobroDia
       onOpenChange(false)
       onSuccess()
     } catch (err) {
-      toast({
-        title: "Error al registrar el cobro",
-        description: err instanceof Error ? err.message : "Error desconocido",
-        variant: "destructive",
-      })
+      aplicarErrorBackend(err, setError, toast, "Error al registrar el cobro")
     } finally {
       setLoading(false)
     }
@@ -107,33 +102,39 @@ export function CobroDialog({ cliente, open, onOpenChange, onSuccess }: CobroDia
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
           <div className="grid gap-2">
             <Label htmlFor="monto">Monto *</Label>
             <Input
               id="monto"
-              type="number"
-              min="0"
-              step="any"
-              value={monto}
-              onChange={(e) => setMonto(e.target.value)}
-              required
+              type="text"
+              inputMode="decimal"
+              {...withCharFilter(register("monto"), montoFilter)}
+              aria-invalid={!!errors.monto}
             />
+            {errors.monto && <p className="text-sm text-destructive">{errors.monto.message}</p>}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="metodo">Método de pago *</Label>
-            <Select value={metodo} onValueChange={(value) => setMetodo(value as string)}>
-              <SelectTrigger id="metodo" className="w-full">
-                <SelectValue placeholder="Seleccioná un método" />
-              </SelectTrigger>
-              <SelectContent>
-                {metodoOptions.map(({ value, label }) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              name="metodo"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="metodo" className="w-full" aria-invalid={!!errors.metodo}>
+                    <SelectValue placeholder="Seleccioná un método" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {metodoOptions.map(({ value, label }) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.metodo && <p className="text-sm text-destructive">{errors.metodo.message}</p>}
           </div>
 
           <DialogFooter>

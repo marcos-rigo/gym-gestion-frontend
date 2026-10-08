@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/api'
+import { apiClient, baseURL } from '@/lib/api'
 
 function normalizeCliente(raw) {
   const apellido = raw.apellido ?? ''
@@ -40,4 +40,22 @@ export function updateCliente(id, data) {
 
 export function deleteCliente(id) {
   return apiClient(`/clientes/${id}`, { method: 'DELETE' })
+}
+
+export async function uploadFotoCliente(blob) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+  const formData = new FormData()
+  formData.append('foto', blob)
+  const res = await fetch(`${baseURL}/upload/foto`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: formData,
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    const err = new Error(errorData.message || 'No se pudo subir la foto')
+    err.status = res.status
+    throw err
+  }
+  return res.json()
 }

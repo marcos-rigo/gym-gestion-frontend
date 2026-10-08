@@ -1,0 +1,1 @@
+{"version":10,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.64.0","options":{},"platform":"win32","wallTime":1791434820858,"monotonicTime":400648.167,"sdkLanguage":"javascript","title":"login.spec.ts:58 › Login › un usuario sin ningún permiso cae en /dashboard y ve el mensaje de acceso denegado"}

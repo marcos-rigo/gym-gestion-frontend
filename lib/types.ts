@@ -23,8 +23,11 @@ export interface Usuario {
     id: string
     nombre: string
     email: string
-    rol: "dueno" | "recepcion" | "profesor"
+    idRol: string
+    rolDescripcion: string
+    esAdmin: boolean
     activo: boolean
+    protegido: boolean
     createdAt: string
 }
 

@@ -1,0 +1,1 @@
+{"version":10,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.64.0","options":{},"platform":"win32","wallTime":1791434825307,"monotonicTime":405097.185,"sdkLanguage":"javascript","title":"permisos.spec.ts:7 › un rol sin ningún permiso no ve links y cualquier ruta de módulo lo manda a /dashboard con el mensaje"}

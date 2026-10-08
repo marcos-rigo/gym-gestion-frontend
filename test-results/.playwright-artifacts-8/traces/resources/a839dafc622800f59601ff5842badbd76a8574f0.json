@@ -1,0 +1,1 @@
+{"data":{"idRol":"9d9a32c8-f51d-4535-a5e3-8b54acf8412a","descripcion":"Zze2e Admin","esAdmin":true,"permissions":["clientes_crear","clientes_editar","clientes_eliminar","clientes_ver","estadisticas_ver","facturacion_cobrar","facturacion_ver","roles_crear","roles_editar","roles_eliminar","roles_ver","usuarios_activar","usuarios_crear","usuarios_editar","usuarios_ver"]}}

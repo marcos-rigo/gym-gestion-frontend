@@ -3,13 +3,13 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { login as apiLogin, logout as apiLogout, isAuthenticated as checkAuth } from "@/lib/auth"
+import { primeraRutaAccesible } from "@/lib/permissions"
 import { getMisPermisos } from "@/services/roles"
 
 interface Usuario {
   id: string
   nombre: string
   email: string
-  rol: "dueno" | "recepcion" | "profesor"
 }
 
 interface AuthContextType {
@@ -53,14 +53,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const data = await apiLogin(email, password)
       setUsuario(data.usuario)
+      let permisosData: { permissions?: string[]; esAdmin?: boolean } | undefined
       try {
-        const permisosData = await getMisPermisos()
+        permisosData = await getMisPermisos()
         setPermisos(permisosData?.permissions ?? [])
         setEsAdmin(permisosData?.esAdmin ?? false)
       } catch {
         setPermisos([])
       }
-      router.push("/dashboard")
+      router.push(
+        primeraRutaAccesible({ esAdmin: permisosData?.esAdmin ?? false, permisos: permisosData?.permissions ?? [] })
+      )
       return { success: true }
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : "Error al iniciar sesión" }

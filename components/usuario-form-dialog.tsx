@@ -1,7 +1,9 @@
 "use client"
 
-import { useEffect, useState, type FormEvent } from "react"
-import { Loader2 } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Controller, useForm, type Resolver } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { Eye, EyeOff, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -23,6 +25,13 @@ import {
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import type { Role, Usuario } from "@/lib/types"
+import {
+  aplicarErrorBackend,
+  letrasFilter,
+  usuarioCreateSchema,
+  usuarioEditSchema,
+  withCharFilter,
+} from "@/lib/validations"
 import { getRoles } from "@/services/roles"
 import { createUsuario, updateUsuario } from "@/services/usuarios"
 
@@ -33,31 +42,22 @@ interface UsuarioFormDialogProps {
   initialData?: Usuario | null
 }
 
-type FormState = {
+// Forma unificada: en modo edición password/confirmPassword simplemente no se
+// renderizan ni se validan (usuarioEditSchema no los exige), pero el tipo los
+// declara opcionales para que el mismo formulario sirva en los dos modos.
+interface FormValues {
   nombre: string
   email: string
-  password: string
-  confirmPassword: string
-  rol: string
+  idRol: string
+  password?: string
+  confirmPassword?: string
 }
 
-const emptyForm: FormState = {
-  nombre: "",
-  email: "",
-  password: "",
-  confirmPassword: "",
-  rol: "",
-}
-
-function toFormState(usuario?: Usuario | null): FormState {
-  if (!usuario) return emptyForm
-  return {
-    nombre: usuario.nombre,
-    email: usuario.email,
-    password: "",
-    confirmPassword: "",
-    rol: usuario.rol,
+function toDefaults(isEdit: boolean, usuario?: Usuario | null): FormValues {
+  if (isEdit && usuario) {
+    return { nombre: usuario.nombre, email: usuario.email, idRol: usuario.idRol }
   }
+  return { nombre: "", email: "", idRol: "", password: "", confirmPassword: "" }
 }
 
 export function UsuarioFormDialog({
@@ -67,16 +67,35 @@ export function UsuarioFormDialog({
   initialData,
 }: UsuarioFormDialogProps) {
   const { toast } = useToast()
-  const [form, setForm] = useState<FormState>(() => toFormState(initialData))
   const [loading, setLoading] = useState(false)
   const [prevOpen, setPrevOpen] = useState(open)
   const [roles, setRoles] = useState<Role[]>([])
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  // isEdit queda fijo por instancia: usuario-module.tsx renderiza un dialog
+  // separado para crear y otro para editar, nunca el mismo con initialData cambiante.
   const isEdit = Boolean(initialData)
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    setError,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(isEdit ? usuarioEditSchema : usuarioCreateSchema) as Resolver<FormValues>,
+    defaultValues: toDefaults(isEdit, initialData),
+  })
 
   // Al abrir el dialog, (re)cargar el formulario con initialData o vacío
   if (open !== prevOpen) {
     setPrevOpen(open)
-    if (open) setForm(toFormState(initialData))
+    if (open) {
+      reset(toDefaults(isEdit, initialData))
+      setShowPassword(false)
+      setShowConfirmPassword(false)
+    }
   }
 
   // Los roles se cargan dinámicamente cada vez que se abre el dialog
@@ -93,69 +112,34 @@ export function UsuarioFormDialog({
       })
   }, [open, toast])
 
-  function handleChange(field: keyof FormState, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }))
-  }
-
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    if (!form.nombre.trim() || !form.email.trim()) {
-      toast({
-        title: "Campos requeridos",
-        description: "Nombre y email son obligatorios.",
-        variant: "destructive",
-      })
-      return
-    }
-    if (!isEdit && !form.password.trim()) {
-      toast({
-        title: "Campos requeridos",
-        description: "La contraseña es obligatoria para un usuario nuevo.",
-        variant: "destructive",
-      })
-      return
-    }
-    if (!isEdit && form.password !== form.confirmPassword) {
-      toast({
-        title: "Las contraseñas no coinciden",
-        description: "Verificá que la contraseña y su confirmación sean iguales.",
-        variant: "destructive",
-      })
-      return
-    }
-    if (!form.rol) {
-      toast({
-        title: "Campos requeridos",
-        description: "Seleccioná un rol.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    const payload: Record<string, string> = {
-      nombre: form.nombre.trim(),
-      email: form.email.trim(),
-      rol: form.rol,
-    }
-    if (!isEdit) payload.password = form.password
-
+  async function onSubmit(values: FormValues) {
     setLoading(true)
     try {
       if (initialData) {
-        await updateUsuario(initialData.id, payload)
-        toast({ title: "Usuario actualizado", description: form.nombre })
+        await updateUsuario(initialData.id, {
+          nombre: values.nombre,
+          email: values.email,
+          idRol: values.idRol,
+        })
+        toast({ title: "Usuario actualizado", description: values.nombre })
       } else {
-        await createUsuario(payload)
-        toast({ title: "Usuario creado", description: form.nombre })
+        await createUsuario({
+          nombre: values.nombre,
+          email: values.email,
+          idRol: values.idRol,
+          password: values.password as string,
+        })
+        toast({ title: "Usuario creado", description: values.nombre })
       }
       onOpenChange(false)
       onSuccess()
     } catch (err) {
-      toast({
-        title: isEdit ? "Error al actualizar el usuario" : "Error al crear el usuario",
-        description: err instanceof Error ? err.message : "Error desconocido",
-        variant: "destructive",
-      })
+      aplicarErrorBackend(
+        err,
+        setError,
+        toast,
+        isEdit ? "Error al actualizar el usuario" : "Error al crear el usuario"
+      )
     } finally {
       setLoading(false)
     }
@@ -173,67 +157,103 @@ export function UsuarioFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
           <div className="grid gap-2">
             <Label htmlFor="nombre">Nombre *</Label>
             <Input
               id="nombre"
-              value={form.nombre}
-              onChange={(e) => handleChange("nombre", e.target.value)}
-              required
+              {...withCharFilter(register("nombre"), letrasFilter)}
+              aria-invalid={!!errors.nombre}
             />
+            {errors.nombre && <p className="text-sm text-destructive">{errors.nombre.message}</p>}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="email">Email *</Label>
             <Input
               id="email"
               type="email"
-              value={form.email}
-              onChange={(e) => handleChange("email", e.target.value)}
-              required
+              {...register("email")}
+              aria-invalid={!!errors.email}
             />
+            {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
           </div>
           {!isEdit && (
             <div className="grid gap-2">
               <Label htmlFor="password">Contraseña *</Label>
-              <Input
-                id="password"
-                type="password"
-                value={form.password}
-                onChange={(e) => handleChange("password", e.target.value)}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  className="pr-9"
+                  {...register("password")}
+                  aria-invalid={!!errors.password}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  tabIndex={-1}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  className="absolute right-0.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? <EyeOff /> : <Eye />}
+                </Button>
+              </div>
+              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
           )}
           {!isEdit && (
             <div className="grid gap-2">
               <Label htmlFor="confirmPassword">Confirmar contraseña *</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={form.confirmPassword}
-                onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  className="pr-9"
+                  {...register("confirmPassword")}
+                  aria-invalid={!!errors.confirmPassword}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  tabIndex={-1}
+                  aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  className="absolute right-0.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                >
+                  {showConfirmPassword ? <EyeOff /> : <Eye />}
+                </Button>
+              </div>
+              {errors.confirmPassword && (
+                <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+              )}
             </div>
           )}
           <div className="grid gap-2">
             <Label htmlFor="rol">Rol *</Label>
-            <Select
-              value={form.rol}
-              onValueChange={(value) => handleChange("rol", value as string)}
-            >
-              <SelectTrigger id="rol" className="w-full">
-                <SelectValue placeholder="Seleccioná un rol" />
-              </SelectTrigger>
-              <SelectContent>
-                {roles.map((r) => (
-                  <SelectItem key={r.idRol} value={r.idRol}>
-                    {r.descripcion}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              name="idRol"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="rol" className="w-full" aria-invalid={!!errors.idRol}>
+                    <SelectValue placeholder="Seleccioná un rol" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map((r) => (
+                      <SelectItem key={r.idRol} value={r.idRol}>
+                        {r.descripcion}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.idRol && <p className="text-sm text-destructive">{errors.idRol.message}</p>}
           </div>
 
           <DialogFooter>
