@@ -97,7 +97,9 @@ export function DashboardOverview() {
       ].map(({ title, value }) => (
         <Card key={title}>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+              {title}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -132,10 +134,15 @@ export function DashboardOverview() {
   if (!stats) return null
 
   const statCards = [
-    { title: "Total Clientes", value: stats.total, icon: Users, color: "text-primary" },
-    { title: "Activos", value: stats.activos, icon: CheckCircle, color: "text-success" },
-    { title: "Por Vencer (7 días)", value: stats.porVencer, icon: Clock, color: "text-amber-600" },
-    { title: "Morosos", value: stats.morosos, icon: AlertTriangle, color: "text-critical" },
+    { title: "Total Clientes", value: stats.total, icon: Users, badgeClass: "bg-primary/15 text-primary" },
+    { title: "Activos", value: stats.activos, icon: CheckCircle, badgeClass: "bg-success/15 text-success" },
+    {
+      title: "Por Vencer (7 días)",
+      value: stats.porVencer,
+      icon: Clock,
+      badgeClass: "bg-warning/25 text-amber-700",
+    },
+    { title: "Morosos", value: stats.morosos, icon: AlertTriangle, badgeClass: "bg-critical/15 text-critical" },
   ]
 
   const vencimientos = stats.proximosVencimientos ?? []
@@ -144,12 +151,18 @@ export function DashboardOverview() {
     <div className="flex flex-col gap-6">
       {facturacionCards}
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {statCards.map(({ title, value, icon: Icon, color }) => (
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+        {statCards.map(({ title, value, icon: Icon, badgeClass }) => (
           <Card key={title}>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-              <Icon className={`size-4 ${color}`} />
+              <CardTitle className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                {title}
+              </CardTitle>
+              <span
+                className={`flex size-8 shrink-0 items-center justify-center rounded-full ${badgeClass}`}
+              >
+                <Icon className="size-4" />
+              </span>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{value}</div>
@@ -160,10 +173,12 @@ export function DashboardOverview() {
 
       <Card className="max-w-xs">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
+          <CardTitle className="text-xs font-semibold uppercase tracking-wide text-gray-600">
             Nuevos este mes
           </CardTitle>
-          <UserPlus className="size-4 text-primary" />
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <UserPlus className="size-4" />
+          </span>
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold">{stats.nuevosMes}</div>

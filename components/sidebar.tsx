@@ -33,15 +33,18 @@ export function Sidebar() {
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="icon"
-        className="fixed top-4 left-4 z-50 md:hidden"
-        aria-label="Abrir menú"
-        onClick={() => setMobileOpen(true)}
-      >
-        <Menu />
-      </Button>
+      <header className="fixed inset-x-0 top-0 z-50 flex h-16 items-center gap-3 border-b border-white/10 bg-deep/95 px-4 backdrop-blur-sm md:hidden">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-white hover:bg-white/10 hover:text-lime"
+          aria-label="Abrir menú"
+          onClick={() => setMobileOpen(true)}
+        >
+          <Menu />
+        </Button>
+        <span className="font-display text-lg tracking-[0.15em] text-lime">COLOSSEO</span>
+      </header>
 
       {mobileOpen && (
         <div
