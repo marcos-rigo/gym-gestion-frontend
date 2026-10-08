@@ -43,7 +43,11 @@ export function Sidebar() {
         >
           <Menu />
         </Button>
-        <span className="font-display text-lg tracking-[0.15em] text-lime">COLOSSEO</span>
+        <img
+          src="/logo.png"
+          alt="Colosseo Gym Barrio Norte"
+          className="h-8 w-auto max-w-[150px] object-contain sm:h-9 sm:max-w-[170px]"
+        />
       </header>
 
       {mobileOpen && (
@@ -59,8 +63,12 @@ export function Sidebar() {
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="mb-6 flex items-center justify-between">
-          <span className="font-display text-2xl tracking-[0.15em] text-lime">COLOSSEO</span>
+        <div className="mb-6 flex items-center justify-between gap-2">
+          <img
+            src="/logo.png"
+            alt="Colosseo Gym Barrio Norte"
+            className="h-10 w-auto max-w-[170px] object-contain"
+          />
           <Button
             variant="ghost"
             size="icon-sm"
