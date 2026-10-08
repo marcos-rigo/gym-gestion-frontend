@@ -54,3 +54,8 @@ export async function getPagos(filtros = {}) {
 export function anularPago(id, motivo) {
   return apiClient(`/pagos/${id}/anular`, { method: 'POST', body: JSON.stringify({ motivo }) })
 }
+
+export async function getCierreCaja(fecha) {
+  const { data } = await apiClient(`/pagos/cierre-caja?fecha=${fecha}`)
+  return data
+}

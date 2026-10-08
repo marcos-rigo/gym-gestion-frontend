@@ -19,3 +19,12 @@ export function formatDate(dateString: string | null | undefined) {
   if (parts.length !== 3) return dateString
   return `${parts[2]}/${parts[1]}/${parts[0]}`
 }
+
+// Zona horaria del gimnasio (espejo de APP_TIMEZONE en el backend). "Hoy" en el
+// navegador del dueño puede no coincidir con "hoy" en Tucumán; esto evita ese desfase
+// en selectores de fecha que deben arrancar en el día del gimnasio, no el del browser.
+const APP_TIMEZONE = "America/Argentina/Tucuman"
+
+export function hoyTucuman() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: APP_TIMEZONE }).format(new Date())
+}

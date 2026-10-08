@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Ban, Loader2, Plus, Search, TrendingDown, TrendingUp } from "lucide-react"
 
 import { AnularPagoDialog } from "@/components/anular-pago-dialog"
+import { CierreCajaTab } from "@/components/cierre-caja-tab"
+import { MorososTab } from "@/components/morosos-tab"
+import { PorVencerTab } from "@/components/por-vencer-tab"
 import { RegistrarPagoDialog } from "@/components/registrar-pago-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -24,6 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { PERMISOS } from "@/lib/permissions"
@@ -230,6 +234,15 @@ export function FacturacionModule() {
         </Card>
       </div>
 
+      <Tabs defaultValue="movimientos">
+        <TabsList>
+          <TabsTrigger value="movimientos">Movimientos</TabsTrigger>
+          <TabsTrigger value="morosos">Morosos</TabsTrigger>
+          <TabsTrigger value="por-vencer">Por Vencer</TabsTrigger>
+          <TabsTrigger value="cierre-caja">Cierre de Caja</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="movimientos" className="flex flex-col gap-4">
       <Card>
         <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div className="relative lg:col-span-2">
@@ -410,6 +423,20 @@ export function FacturacionModule() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="morosos">
+          <MorososTab onCobroRegistrado={fetchStats} />
+        </TabsContent>
+
+        <TabsContent value="por-vencer">
+          <PorVencerTab onCobroRegistrado={fetchStats} />
+        </TabsContent>
+
+        <TabsContent value="cierre-caja">
+          <CierreCajaTab />
+        </TabsContent>
+      </Tabs>
 
       <RegistrarPagoDialog open={showRegistrar} onOpenChange={setShowRegistrar} onSuccess={handleSuccess} />
 

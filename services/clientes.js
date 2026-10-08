@@ -30,6 +30,48 @@ export async function getClientes() {
   return data.map(normalizeCliente)
 }
 
+function normalizeMoroso(raw) {
+  return {
+    idCliente: raw.id,
+    nombreCompleto: raw.nombreCompleto,
+    dni: raw.dni,
+    fechaVencimiento: raw.fechaVencimiento,
+    diasAtraso: raw.diasAtraso,
+    montoReferencia: raw.montoReferencia === null ? null : Number(raw.montoReferencia),
+  }
+}
+
+function normalizePorVencer(raw) {
+  return {
+    idCliente: raw.id,
+    nombreCompleto: raw.nombreCompleto,
+    dni: raw.dni,
+    fechaVencimiento: raw.fechaVencimiento,
+    diasRestantes: raw.diasRestantes,
+    montoReferencia: raw.montoReferencia === null ? null : Number(raw.montoReferencia),
+  }
+}
+
+function buildListadoParams({ query, page, pageSize }) {
+  const params = new URLSearchParams()
+  if (query) params.set('query', query)
+  if (page) params.set('page', String(page))
+  if (pageSize) params.set('pageSize', String(pageSize))
+  return params.toString()
+}
+
+export async function getMorosos(filtros = {}) {
+  const query = buildListadoParams(filtros)
+  const { data, meta } = await apiClient(`/clientes/morosos${query ? `?${query}` : ''}`)
+  return { data: data.map(normalizeMoroso), meta }
+}
+
+export async function getPorVencer(filtros = {}) {
+  const query = buildListadoParams(filtros)
+  const { data, meta } = await apiClient(`/clientes/por-vencer${query ? `?${query}` : ''}`)
+  return { data: data.map(normalizePorVencer), meta }
+}
+
 export function createCliente(data) {
   return apiClient('/clientes', { method: 'POST', body: JSON.stringify(data) })
 }

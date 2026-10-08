@@ -68,3 +68,43 @@ export interface StatsFacturacion {
     cantidadPagosMes: number
     ticketPromedioMes: number
 }
+
+export interface ClienteMoroso {
+    idCliente: string
+    nombreCompleto: string
+    dni: string
+    fechaVencimiento: string
+    diasAtraso: number
+    montoReferencia: number | null
+}
+
+export interface ClientePorVencer {
+    idCliente: string
+    nombreCompleto: string
+    dni: string
+    fechaVencimiento: string
+    diasRestantes: number
+    montoReferencia: number | null
+}
+
+export interface CierreCajaMetodo {
+    metodo: "efectivo" | "tarjeta" | "transferencia"
+    monto: number
+    cantidad: number
+}
+
+export interface CierreCajaEmpleado {
+    usuarioId: string | null
+    usuarioNombre: string
+    monto: number
+    cantidad: number
+    porMetodo: CierreCajaMetodo[]
+}
+
+export interface CierreCaja {
+    fecha: string
+    general: { monto: number; cantidad: number }
+    porMetodo: CierreCajaMetodo[]
+    porEmpleado: CierreCajaEmpleado[]
+    anulados: { cantidad: number; monto: number }
+}
