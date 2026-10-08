@@ -68,6 +68,38 @@ describe("apiClient", () => {
     expect(location.href).toBe("http://localhost:3000/login")
   })
 
+  it("en 401 de /auth/login no limpia localStorage ni redirige, y el Error tiene el status y el message del backend", async () => {
+    localStorage.setItem("token", "sigue-presente")
+    localStorage.setItem("usuario", JSON.stringify({ id: "1" }))
+    const location = stubLocation("/dashboard")
+    mockFetchOnce({ ok: false, status: 401, json: async () => ({ message: "Credenciales inválidas" }) })
+    const { apiClient } = await import("./api")
+
+    const err: (Error & { status?: number }) | undefined = await apiClient("/auth/login", {
+      method: "POST",
+    }).catch((e) => e)
+
+    expect(err).toBeInstanceOf(Error)
+    expect(err?.message).toBe("Credenciales inválidas")
+    expect(err?.status).toBe(401)
+    expect(localStorage.getItem("token")).toBe("sigue-presente")
+    expect(localStorage.getItem("usuario")).not.toBeNull()
+    expect(location.href).toBe("http://localhost:3000/dashboard")
+  })
+
+  it("en 401 de cualquier otra ruta sí limpia localStorage y redirige a /login", async () => {
+    localStorage.setItem("token", "abc123")
+    localStorage.setItem("usuario", JSON.stringify({ id: "1" }))
+    const location = stubLocation("/dashboard")
+    mockFetchOnce({ ok: false, status: 401, json: async () => ({ message: "No autorizado" }) })
+    const { apiClient } = await import("./api")
+
+    await expect(apiClient("/usuarios")).rejects.toThrow("No autorizado")
+    expect(localStorage.getItem("token")).toBeNull()
+    expect(localStorage.getItem("usuario")).toBeNull()
+    expect(location.href).toBe("/login")
+  })
+
   it("en una respuesta no-ok, el Error incluye status, message y errors del backend", async () => {
     mockFetchOnce({
       ok: false,

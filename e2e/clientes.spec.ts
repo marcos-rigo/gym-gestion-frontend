@@ -45,14 +45,14 @@ test("crear, editar, buscar y eliminar un cliente de punta a punta", async ({ pa
 
   // crear
   await page.getByRole("button", { name: "Nuevo Cliente" }).click()
-  await page.getByLabel("Nombre *").fill("Zze2e")
+  await page.getByLabel("Nombre *").fill("Zzee")
   await page.getByLabel("Apellido *").fill("Cliente")
   await page.getByLabel("DNI *").fill(dni)
   await page.getByLabel("Teléfono").fill("+5491122334455")
   await page.getByRole("button", { name: "Crear cliente" }).click()
   await expect(page.getByText("Cliente creado")).toBeVisible()
 
-  const fila = page.getByRole("row", { name: new RegExp(`Cliente, Zze2e`) })
+  const fila = page.getByRole("row", { name: new RegExp(`Cliente, Zzee`) })
   await expect(fila).toBeVisible()
   await expect(fila).toContainText(dni)
 
@@ -67,7 +67,7 @@ test("crear, editar, buscar y eliminar un cliente de punta a punta", async ({ pa
 
   // buscar
   await page.getByPlaceholder("Buscar por nombre o DNI...").fill(dni)
-  await expect(page.getByRole("row", { name: new RegExp(`Cliente, Zze2e`) })).toBeVisible()
+  await expect(page.getByRole("row", { name: new RegExp(`Cliente, Zzee`) })).toBeVisible()
   await page.getByPlaceholder("Buscar por nombre o DNI...").fill("xxx-no-existe-xxx")
   await expect(page.getByText("No se encontraron clientes.")).toBeVisible()
   await page.getByPlaceholder("Buscar por nombre o DNI...").fill(dni)
@@ -84,7 +84,7 @@ test("crear, editar, buscar y eliminar un cliente de punta a punta", async ({ pa
   await fila.getByRole("button", { name: "Eliminar cliente" }).click()
   await page.getByRole("button", { name: "Eliminar", exact: true }).click()
   await expect(page.getByText("Cliente eliminado")).toBeVisible()
-  await expect(page.getByRole("row", { name: new RegExp(`Cliente, Zze2e`) })).not.toBeVisible()
+  await expect(page.getByRole("row", { name: new RegExp(`Cliente, Zzee`) })).not.toBeVisible()
 })
 
 test("subida de foto con cámara falsa de Chromium", async ({ page }) => {

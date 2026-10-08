@@ -19,12 +19,28 @@ test("descripción con números y sin permisos muestran error", async ({ page })
 })
 
 test("descripción duplicada da 409 en el campo", async ({ page }) => {
+  // El campo "Nombre del rol" filtra dígitos al tipear (letrasFilter), así que no se
+  // puede escribir el "2" de los roles fixture "Zze2e ..." para duplicarlos tal cual:
+  // se crea un rol propio sin dígitos y se intenta duplicar ese.
+  const nombreRol = "Zzee Dup"
   await page.getByRole("button", { name: "Nuevo Rol" }).click()
-  await page.getByLabel("Nombre del rol *").fill("Zze2e Parcial")
+  await page.getByLabel("Nombre del rol *").fill(nombreRol)
+  await page.getByRole("checkbox", { name: "Ver Clientes" }).click()
+  await page.getByRole("button", { name: "Crear rol" }).click()
+  await expect(page.getByText("Rol creado")).toBeVisible()
+
+  await page.getByRole("button", { name: "Nuevo Rol" }).click()
+  await page.getByLabel("Nombre del rol *").fill(nombreRol)
   await page.getByRole("checkbox", { name: "Ver Clientes" }).click()
   await page.getByRole("button", { name: "Crear rol" }).click()
   await expect(page.getByText("Ya existe un rol con esa descripción")).toBeVisible()
   await page.getByRole("button", { name: "Cancelar" }).click()
+
+  // cleanup del rol creado al principio
+  const filaRol = page.getByRole("row", { name: new RegExp(nombreRol) })
+  await filaRol.getByRole("button", { name: "Eliminar rol" }).click()
+  await page.getByRole("button", { name: "Eliminar", exact: true }).click()
+  await expect(page.getByText("Rol eliminado")).toBeVisible()
 })
 
 test("el rol Zze2e Admin (protegido) solo se puede ver, no editar ni eliminar", async ({ page }) => {
@@ -33,14 +49,16 @@ test("el rol Zze2e Admin (protegido) solo se puede ver, no editar ni eliminar", 
   await expect(fila.getByRole("button", { name: "Eliminar rol" })).toBeDisabled()
 
   await fila.getByRole("button", { name: "Ver rol" }).click()
-  await expect(page.getByText("Ver Rol")).toBeVisible()
+  // getByText("Ver Rol") matchea por substring contra el checkbox "Ver Roles"; el
+  // título del dialog es un heading, así que hay que apuntar a ese rol específico.
+  await expect(page.getByRole("heading", { name: "Ver Rol", exact: true })).toBeVisible()
   await expect(page.getByLabel("Nombre del rol *")).toBeDisabled()
   await expect(page.getByRole("button", { name: /Crear rol|Guardar cambios/ })).toHaveCount(0)
   await page.getByRole("button", { name: "Cerrar" }).click()
 })
 
 test("crear rol, asignar permisos, usarlo en un usuario y no poder eliminarlo hasta liberar ese usuario", async ({ page }) => {
-  const nombreRol = `Zze2e Temporal`
+  const nombreRol = `Zzee Temporal`
   await page.getByRole("button", { name: "Nuevo Rol" }).click()
   await page.getByLabel("Nombre del rol *").fill(nombreRol)
   await page.getByRole("checkbox", { name: "Ver Clientes" }).click()
@@ -53,7 +71,7 @@ test("crear rol, asignar permisos, usarlo en un usuario y no poder eliminarlo ha
   await page.goto("/dashboard/usuarios")
   const email = `zze2e_rol_${Date.now()}@example.test`
   await page.getByRole("button", { name: "Nuevo Usuario" }).click()
-  await page.getByLabel("Nombre *").fill("Zze2e UsaRol")
+  await page.getByLabel("Nombre *").fill("Zzee UsaRol")
   await page.getByLabel("Email *").fill(email)
   await page.getByLabel("Contraseña *", { exact: true }).fill("Test1234x")
   await page.getByLabel("Confirmar contraseña *").fill("Test1234x")
@@ -71,7 +89,7 @@ test("crear rol, asignar permisos, usarlo en un usuario y no poder eliminarlo ha
 
   // liberar: borrar el usuario y ahora sí eliminar el rol
   await page.goto("/dashboard/usuarios")
-  const filaUsuario = page.getByRole("row", { name: /Zze2e UsaRol/ })
+  const filaUsuario = page.getByRole("row", { name: /Zzee UsaRol/ })
   await filaUsuario.getByRole("button", { name: "Eliminar usuario" }).click()
   await page.getByRole("button", { name: "Eliminar", exact: true }).click()
   await expect(page.getByText("Usuario eliminado")).toBeVisible()

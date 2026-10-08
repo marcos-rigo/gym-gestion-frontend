@@ -35,7 +35,7 @@ test("crear, editar, desactivar y eliminar un usuario; email duplicado da 409", 
   const email = `zze2e_crud_${Date.now()}@example.test`
 
   await page.getByRole("button", { name: "Nuevo Usuario" }).click()
-  await page.getByLabel("Nombre *").fill("Zze2e CRUD")
+  await page.getByLabel("Nombre *").fill("Zzee CRUD")
   await page.getByLabel("Email *").fill(email)
   await page.getByLabel("Contraseña *", { exact: true }).fill("Test1234x")
   await page.getByLabel("Confirmar contraseña *").fill("Test1234x")
@@ -43,12 +43,12 @@ test("crear, editar, desactivar y eliminar un usuario; email duplicado da 409", 
   await page.getByRole("button", { name: "Crear usuario" }).click()
   await expect(page.getByText("Usuario creado")).toBeVisible()
 
-  const fila = page.getByRole("row", { name: /Zze2e CRUD/ })
+  const fila = page.getByRole("row", { name: /Zzee CRUD/ })
   await expect(fila).toBeVisible()
 
   // email duplicado
   await page.getByRole("button", { name: "Nuevo Usuario" }).click()
-  await page.getByLabel("Nombre *").fill("Zze2e Otro")
+  await page.getByLabel("Nombre *").fill("Zzee Otro")
   await page.getByLabel("Email *").fill(email)
   await page.getByLabel("Contraseña *", { exact: true }).fill("Test1234x")
   await page.getByLabel("Confirmar contraseña *").fill("Test1234x")
@@ -60,10 +60,10 @@ test("crear, editar, desactivar y eliminar un usuario; email duplicado da 409", 
   // editar
   await fila.getByRole("button", { name: "Editar usuario" }).click()
   await page.getByLabel("Nombre *").fill("")
-  await page.getByLabel("Nombre *").fill("Zze2e CRUD Editado")
+  await page.getByLabel("Nombre *").fill("Zzee CRUD Editado")
   await page.getByRole("button", { name: "Guardar cambios" }).click()
   await expect(page.getByText("Usuario actualizado")).toBeVisible()
-  const filaEditada = page.getByRole("row", { name: /Zze2e CRUD Editado/ })
+  const filaEditada = page.getByRole("row", { name: /Zzee CRUD Editado/ })
   await expect(filaEditada).toBeVisible()
 
   // desactivar
@@ -75,7 +75,7 @@ test("crear, editar, desactivar y eliminar un usuario; email duplicado da 409", 
   await filaEditada.getByRole("button", { name: "Eliminar usuario" }).click()
   await page.getByRole("button", { name: "Eliminar", exact: true }).click()
   await expect(page.getByText("Usuario eliminado")).toBeVisible()
-  await expect(page.getByRole("row", { name: /Zze2e CRUD Editado/ })).not.toBeVisible()
+  await expect(page.getByRole("row", { name: /Zzee CRUD Editado/ })).not.toBeVisible()
 })
 
 test("el usuario protegido (superadmin) no tiene editar/eliminar/switch", async ({ page }) => {

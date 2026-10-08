@@ -13,7 +13,8 @@ test("monto 0, negativo y con 3 decimales se rechazan; un cobro válido pone al 
   const dni = dniDePrueba()
   await page.goto("/dashboard/clientes")
   await page.getByRole("button", { name: "Nuevo Cliente" }).click()
-  await page.getByLabel("Nombre *").fill("Zze2e")
+  // "Nombre" filtra dígitos al tipear (letrasFilter): un "2" acá nunca llega a guardarse.
+  await page.getByLabel("Nombre *").fill("Zzee")
   await page.getByLabel("Apellido *").fill("Factura")
   await page.getByLabel("DNI *").fill(dni)
   await page.getByRole("button", { name: "Crear cliente" }).click()
@@ -28,8 +29,11 @@ test("monto 0, negativo y con 3 decimales se rechazan; un cobro válido pone al 
     [clienteId]
   )
 
-  await page.reload()
-  const fila = page.getByRole("row", { name: /Factura, Zze2e/ })
+  await Promise.all([
+    page.waitForResponse((res) => res.url().includes("/api/clientes") && res.request().method() === "GET"),
+    page.reload(),
+  ])
+  const fila = page.getByRole("row", { name: /Factura, Zzee/ })
   await expect(fila.getByText("Moroso")).toBeVisible()
 
   await fila.getByRole("button", { name: "Ver cliente" }).click()

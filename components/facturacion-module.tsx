@@ -158,6 +158,19 @@ export function FacturacionModule() {
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
+  // El back solo deja anular el pago vigente más reciente de cada cliente (409 si no).
+  // `pagos` ya viene ordenado por fecha_pago DESC, así que la primera fila vigente que
+  // aparece para un cliente es esa; evita mostrar un botón que siempre va a fallar.
+  // Limitación conocida: si el pago vigente más reciente de un cliente quedó en otra
+  // página (por el filtro/paginado actual), esta página no puede saberlo.
+  const ultimoVigentePorCliente = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const pago of pagos) {
+      if (!pago.anulado && !map.has(pago.clienteId)) map.set(pago.clienteId, pago.id)
+    }
+    return map
+  }, [pagos])
+
   const kpis = useMemo(() => {
     if (!stats) return []
     return [
@@ -381,7 +394,9 @@ export function FacturacionModule() {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end">
-                          {puedeAnular && !pago.anulado && (
+                          {puedeAnular &&
+                            !pago.anulado &&
+                            ultimoVigentePorCliente.get(pago.clienteId) === pago.id && (
                             <Button
                               variant="ghost"
                               size="icon-sm"
