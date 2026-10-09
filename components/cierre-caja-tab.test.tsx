@@ -3,13 +3,20 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { CierreCajaTab } from "./cierre-caja-tab"
 import type { CierreCajaCompleto } from "@/lib/types"
 import { hoyTucuman } from "@/lib/utils"
+import { getEstadoTurno } from "@/services/caja"
 
 const { getCierreCajaCompletoMock, toastMock } = vi.hoisted(() => ({
   getCierreCajaCompletoMock: vi.fn(),
   toastMock: vi.fn(),
 }))
 
-vi.mock("@/services/caja", () => ({ getCierreCajaCompleto: getCierreCajaCompletoMock }))
+vi.mock("@/services/caja", () => ({
+  getCierreCajaCompleto: getCierreCajaCompletoMock,
+  // El panel de turno no es objeto de estos tests: queda en carga
+  getEstadoTurno: vi.fn(() => new Promise(() => {})),
+  cerrarTurno: vi.fn(),
+}))
+vi.mock("@/contexts/auth-context", () => ({ useAuth: () => ({ esAdmin: true, permisos: [] }) }))
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: toastMock }) }))
 
 function cierreVacio(fecha: string): CierreCajaCompleto {
@@ -112,4 +119,34 @@ describe("CierreCajaTab", () => {
 
     await waitFor(() => expect(getCierreCajaCompletoMock).toHaveBeenLastCalledWith("2026-01-05"))
   })
-})
+
+  it("el panel de turno muestra la composición y el total neto que devuelve el backend", async () => {
+    vi.mocked(getEstadoTurno).mockResolvedValueOnce({
+      fecha: hoyTucuman(),
+      turno: "tarde",
+      turnoActual: "tarde",
+      enVivo: null,
+      cerrado: {
+        id: "c1",
+        fecha: hoyTucuman(),
+        turno: "tarde",
+        totalPorMetodo: { efectivo: 1000, transferencia: 500, mixto: 0 },
+        total: 1500,
+        totalCuotas: 1800,
+        totalVentas: 200,
+        totalIngresosExtra: 0,
+        totalEgresos: 500,
+        cantidadPagos: 3,
+        desglose: { cuotas: { efectivo: 0, transferencia: 0, total: 1800, cantidad: 3, cobrosMixtos: 0 } },
+        empleados: [],
+        creadoPorNombre: null,
+        createdAt: "2026-10-09T18:30:00.000Z",
+      },
+    } as Awaited<ReturnType<typeof getEstadoTurno>>)
+    getCierreCajaCompletoMock.mockResolvedValue(cierreVacio(hoyTucuman()))
+    render(<CierreCajaTab />)
+
+    expect(await screen.findByText("Composición del turno")).toBeInTheDocument()
+    expect(screen.getByText("Total neto")).toBeInTheDocument()
+  })
+});

@@ -73,7 +73,7 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r border-white/10 bg-deep p-4 transition-transform md:static md:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-60 shrink-0 flex-col overflow-hidden border-r border-white/10 bg-deep p-4 transition-transform md:static md:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -94,7 +94,7 @@ export function Sidebar() {
           </Button>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1">
+        <nav className="flex min-h-0 flex-1 flex-col gap-1">
           {items.map(({ label, href, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`)
             return (
@@ -116,7 +116,7 @@ export function Sidebar() {
           })}
         </nav>
 
-        <div className="mt-6 border-t border-white/10 pt-4">
+        <div className="mt-auto border-t border-white/10 pt-4">
           <p className="truncate text-sm font-medium text-white">{usuario?.nombre}</p>
           <p className="truncate text-xs text-[#a0a0a0]">{usuario?.email}</p>
           <Button

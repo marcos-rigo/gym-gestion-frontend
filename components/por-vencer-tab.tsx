@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -119,14 +120,18 @@ export function PorVencerTab({ onCobroRegistrado }: PorVencerTabProps) {
         </CardContent>
       </Card>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nombre o DNI..."
-          value={queryInput}
-          onChange={(e) => setQueryInput(e.target.value)}
-          className="pl-8"
-        />
+      <div className="grid max-w-sm gap-1.5">
+        <Label htmlFor="filtro-por-vencer" className="text-xs font-normal text-muted-foreground">Cliente o DNI</Label>
+        <div className="relative">
+          <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="filtro-por-vencer"
+            placeholder="Buscar por nombre o DNI..."
+            value={queryInput}
+            onChange={(e) => setQueryInput(e.target.value)}
+            className="pl-8"
+          />
+        </div>
       </div>
 
       {loading ? (

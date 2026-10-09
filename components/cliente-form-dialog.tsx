@@ -201,7 +201,7 @@ export function ClienteFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(value) => !loading && onOpenChange(value)}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="gap-3 sm:max-w-2xl [@media(max-height:699px)]:max-h-[90vh] [@media(max-height:699px)]:overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Editar Cliente" : "Nuevo Cliente"}</DialogTitle>
           <DialogDescription>
@@ -211,8 +211,8 @@ export function ClienteFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
-          <div className="flex flex-col items-center gap-3">
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-3" noValidate>
+          <div className="flex flex-col items-center gap-2">
             {fotoPreview ? (
               <>
                 <img
@@ -254,8 +254,8 @@ export function ClienteFormDialog({
             )}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
+          <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+            <div className="grid gap-1">
               <Label htmlFor="nombre">Nombre *</Label>
               <Input
                 id="nombre"
@@ -264,7 +264,7 @@ export function ClienteFormDialog({
               />
               {errors.nombre && <p className="text-sm text-destructive">{errors.nombre.message}</p>}
             </div>
-            <div className="grid gap-2">
+            <div className="grid gap-1">
               <Label htmlFor="apellido">Apellido *</Label>
               <Input
                 id="apellido"
@@ -273,7 +273,7 @@ export function ClienteFormDialog({
               />
               {errors.apellido && <p className="text-sm text-destructive">{errors.apellido.message}</p>}
             </div>
-            <div className="grid gap-2">
+            <div className="grid gap-1">
               <Label htmlFor="dni">DNI *</Label>
               <Input
                 id="dni"
@@ -283,7 +283,7 @@ export function ClienteFormDialog({
               />
               {errors.dni && <p className="text-sm text-destructive">{errors.dni.message}</p>}
             </div>
-            <div className="grid gap-2">
+            <div className="grid gap-1">
               <Label htmlFor="fechaNacimiento">Fecha de nacimiento</Label>
               <Input
                 id="fechaNacimiento"
@@ -295,7 +295,7 @@ export function ClienteFormDialog({
                 <p className="text-sm text-destructive">{errors.fechaNacimiento.message}</p>
               )}
             </div>
-            <div className="grid gap-2">
+            <div className="grid gap-1">
               <Label htmlFor="telefono">Teléfono</Label>
               <Input
                 id="telefono"
@@ -306,7 +306,7 @@ export function ClienteFormDialog({
               />
               {errors.telefono && <p className="text-sm text-destructive">{errors.telefono.message}</p>}
             </div>
-            <div className="grid gap-2">
+            <div className="grid gap-1">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -316,12 +316,12 @@ export function ClienteFormDialog({
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
-            <div className="grid gap-2">
+            <div className="grid gap-1">
               <Label htmlFor="direccion">Dirección</Label>
               <Input id="direccion" {...register("direccion")} aria-invalid={!!errors.direccion} />
               {errors.direccion && <p className="text-sm text-destructive">{errors.direccion.message}</p>}
             </div>
-            <div className="grid gap-2">
+            <div className="grid gap-1">
               <Label htmlFor="contactoEmergencia">Contacto de emergencia</Label>
               <Input
                 id="contactoEmergencia"
@@ -334,11 +334,12 @@ export function ClienteFormDialog({
             </div>
           </div>
 
-          <div className="grid gap-2">
+          <div className="grid gap-1">
             <Label htmlFor="observaciones">Observaciones</Label>
             <Textarea
               id="observaciones"
-              rows={3}
+              rows={2}
+              className="min-h-14"
               {...register("observaciones")}
               aria-invalid={!!errors.observaciones}
             />
@@ -347,7 +348,7 @@ export function ClienteFormDialog({
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="py-3">
             <Button
               type="button"
               variant="outline"

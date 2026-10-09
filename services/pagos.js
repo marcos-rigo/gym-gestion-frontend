@@ -49,6 +49,7 @@ export async function getPagos(filtros = {}) {
   if (filtros.metodo) params.set('metodo', filtros.metodo)
   if (filtros.usuarioId) params.set('usuarioId', filtros.usuarioId)
   if (filtros.estado) params.set('estado', filtros.estado)
+  if (filtros.turno) params.set('turno', filtros.turno)
   if (filtros.clienteQuery) params.set('clienteQuery', filtros.clienteQuery)
   if (filtros.page) params.set('page', String(filtros.page))
   if (filtros.pageSize) params.set('pageSize', String(filtros.pageSize))

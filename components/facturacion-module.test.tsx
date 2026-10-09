@@ -24,7 +24,11 @@ vi.mock("@/services/clientes", () => ({
   getPorVencer: getPorVencerMock,
   getClientes: vi.fn().mockResolvedValue([]),
 }))
-vi.mock("@/services/caja", () => ({ getCierreCajaCompleto: getCierreCajaCompletoMock }))
+vi.mock("@/services/caja", () => ({
+  getCierreCajaCompleto: getCierreCajaCompletoMock,
+  getEstadoTurno: vi.fn(() => new Promise(() => {})),
+  cerrarTurno: vi.fn(),
+}))
 
 const stats: StatsFacturacion = {
   hoy: 0,

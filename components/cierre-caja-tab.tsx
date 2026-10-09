@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { CierreTurnoPanel } from "@/components/cierre-turno-panel"
 import { useToast } from "@/hooks/use-toast"
 import type { CierreCajaCompleto } from "@/lib/types"
 import { hoyTucuman } from "@/lib/utils"
@@ -71,6 +72,8 @@ export function CierreCajaTab() {
           onChange={(e) => setFecha(e.target.value)}
         />
       </div>
+
+      <CierreTurnoPanel fecha={fecha} />
 
       {loading ? (
         <div className="flex h-24 items-center justify-center text-muted-foreground">

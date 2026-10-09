@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -40,8 +41,31 @@ import { getPagos, getStatsFacturacion } from "@/services/pagos"
 
 const PAGE_SIZE = 20
 
+// Estilo de la etiqueta encima de cada filtro de la fila
+const etiquetaFiltro = "text-xs font-normal text-muted-foreground"
+
 const currencyFormatter = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" })
 const percentFormatter = new Intl.NumberFormat("es-AR", { style: "percent", maximumFractionDigits: 0 })
+
+// `items` en el Select hace que el trigger muestre el label (no el value crudo)
+const opcionesMetodo = [
+  { value: "todos", label: "Todos los métodos" },
+  { value: "efectivo", label: "Efectivo" },
+  { value: "transferencia", label: "Transferencia" },
+  { value: "mixto", label: "Mixto" },
+]
+
+const opcionesTurno = [
+  { value: "todos", label: "Todos los turnos" },
+  { value: "mañana", label: "Mañana" },
+  { value: "tarde", label: "Tarde" },
+]
+
+const opcionesEstado = [
+  { value: "todos", label: "Todos los estados" },
+  { value: "vigente", label: "Vigentes" },
+  { value: "anulado", label: "Anulados" },
+]
 
 const metodoLabel: Record<Pago["metodo"], string> = {
   efectivo: "Efectivo",
@@ -87,6 +111,7 @@ export function FacturacionModule() {
   const [metodo, setMetodo] = useState<string>("todos")
   const [usuarioId, setUsuarioId] = useState<string>("todos")
   const [estado, setEstado] = useState<string>("todos")
+  const [turno, setTurno] = useState<string>("todos")
   const [clienteQueryInput, setClienteQueryInput] = useState("")
   const [clienteQuery, setClienteQuery] = useState("")
 
@@ -125,6 +150,7 @@ export function FacturacionModule() {
       metodo: metodo === "todos" ? undefined : metodo,
       usuarioId: usuarioId === "todos" ? undefined : usuarioId,
       estado: estado === "todos" ? undefined : estado,
+      turno: turno === "todos" ? undefined : turno,
       clienteQuery: clienteQuery || undefined,
       page,
       pageSize: PAGE_SIZE,
@@ -148,7 +174,7 @@ export function FacturacionModule() {
         })
       })
       .finally(() => setLoading(false))
-  }, [desde, hasta, metodo, usuarioId, estado, clienteQuery, page, toast])
+  }, [desde, hasta, metodo, usuarioId, estado, turno, clienteQuery, page, toast])
 
   useEffect(() => {
     fetchStats()
@@ -186,6 +212,11 @@ export function FacturacionModule() {
       { title: "Este Mes", value: stats.mes, anterior: stats.mesAnterior },
     ]
   }, [stats])
+
+  const opcionesEmpleado = [
+    { value: "todos", label: "Todos los empleados" },
+    ...[...empleadosVistos.entries()].map(([id, nombre]) => ({ value: id, label: nombre })),
+  ]
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-8">
@@ -266,88 +297,134 @@ export function FacturacionModule() {
 
         <TabsContent value="movimientos" className="flex flex-col gap-4">
       <Card>
-        <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="relative lg:col-span-2">
-            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-1.5 lg:col-span-2">
+            <Label htmlFor="filtro-cliente" className={etiquetaFiltro}>Cliente o DNI</Label>
+            <div className="relative">
+              <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="filtro-cliente"
+                placeholder="Buscar por cliente o DNI..."
+                value={clienteQueryInput}
+                onChange={(e) => setClienteQueryInput(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="filtro-desde" className={etiquetaFiltro}>Desde</Label>
             <Input
-              placeholder="Buscar por cliente o DNI..."
-              value={clienteQueryInput}
-              onChange={(e) => setClienteQueryInput(e.target.value)}
-              className="pl-8"
+              id="filtro-desde"
+              type="date"
+              value={desde}
+              onChange={(e) => {
+                setDesde(e.target.value)
+                setPage(1)
+              }}
             />
           </div>
-          <Input
-            type="date"
-            aria-label="Desde"
-            value={desde}
-            onChange={(e) => {
-              setDesde(e.target.value)
-              setPage(1)
-            }}
-          />
-          <Input
-            type="date"
-            aria-label="Hasta"
-            value={hasta}
-            onChange={(e) => {
-              setHasta(e.target.value)
-              setPage(1)
-            }}
-          />
-          <Select
-            value={metodo}
-            onValueChange={(v) => {
-              setMetodo(v ?? "todos")
-              setPage(1)
-            }}
-          >
-            <SelectTrigger aria-label="Método de pago">
-              <SelectValue placeholder="Método" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos los métodos</SelectItem>
-              <SelectItem value="efectivo">Efectivo</SelectItem>
-              <SelectItem value="transferencia">Transferencia</SelectItem>
-              <SelectItem value="mixto">Mixto</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={estado}
-            onValueChange={(v) => {
-              setEstado(v ?? "todos")
-              setPage(1)
-            }}
-          >
-            <SelectTrigger aria-label="Estado">
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos los estados</SelectItem>
-              <SelectItem value="vigente">Vigentes</SelectItem>
-              <SelectItem value="anulado">Anulados</SelectItem>
-            </SelectContent>
-          </Select>
-          {empleadosVistos.size > 0 && (
+          <div className="grid gap-1.5">
+            <Label htmlFor="filtro-hasta" className={etiquetaFiltro}>Hasta</Label>
+            <Input
+              id="filtro-hasta"
+              type="date"
+              value={hasta}
+              onChange={(e) => {
+                setHasta(e.target.value)
+                setPage(1)
+              }}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="filtro-metodo" className={etiquetaFiltro}>Método de pago</Label>
             <Select
-              value={usuarioId}
+              items={opcionesMetodo}
+              value={metodo}
               onValueChange={(v) => {
-                setUsuarioId(v ?? "todos")
+                setMetodo(v ?? "todos")
                 setPage(1)
               }}
             >
-              <SelectTrigger aria-label="Empleado">
-                <SelectValue placeholder="Empleado" />
+              <SelectTrigger id="filtro-metodo">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todos">Todos los empleados</SelectItem>
-                {[...empleadosVistos.entries()].map(([id, nombre]) => (
-                  <SelectItem key={id} value={id}>
-                    {nombre}
+                {opcionesMetodo.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="filtro-estado" className={etiquetaFiltro}>Estado</Label>
+            <Select
+              items={opcionesEstado}
+              value={estado}
+              onValueChange={(v) => {
+                setEstado(v ?? "todos")
+                setPage(1)
+              }}
+            >
+              <SelectTrigger id="filtro-estado">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {opcionesEstado.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {empleadosVistos.size > 0 && (
+            <div className="grid gap-1.5">
+              <Label htmlFor="filtro-empleado" className={etiquetaFiltro}>Empleado</Label>
+              <Select
+                items={opcionesEmpleado}
+                value={usuarioId}
+                onValueChange={(v) => {
+                  setUsuarioId(v ?? "todos")
+                  setPage(1)
+                }}
+              >
+                <SelectTrigger id="filtro-empleado">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {opcionesEmpleado.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
+          <div className="grid gap-1.5">
+            <Label htmlFor="filtro-turno" className={etiquetaFiltro}>Turno</Label>
+            <Select
+              items={opcionesTurno}
+              value={turno}
+              onValueChange={(v) => {
+                setTurno(v ?? "todos")
+                setPage(1)
+              }}
+            >
+              <SelectTrigger id="filtro-turno">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {opcionesTurno.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 

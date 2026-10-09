@@ -52,3 +52,18 @@ export async function getCierreCajaCompleto(fecha) {
   const { data } = await apiClient(`/caja/cierre${params}`)
   return data
 }
+
+/** Estado de un turno: el cierre si ya existe, o el resumen en vivo si no. */
+export async function getEstadoTurno({ fecha, turno }) {
+  const params = new URLSearchParams()
+  if (fecha) params.set('fecha', fecha)
+  if (turno) params.set('turno', turno)
+  const { data } = await apiClient(`/caja/cierres/estado?${params.toString()}`)
+  return data
+}
+
+/** Cierra un turno (snapshot de totales). Lanza con status 409 si ya estaba cerrado. */
+export async function cerrarTurno({ fecha, turno }) {
+  const { data } = await apiClient('/caja/cierres', { method: 'POST', body: JSON.stringify({ fecha, turno }) })
+  return data
+}

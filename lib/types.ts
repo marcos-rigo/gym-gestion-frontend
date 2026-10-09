@@ -234,3 +234,48 @@ export interface CierreCajaCompleto {
         ventas: { cantidad: number; monto: number }
     }
 }
+
+export type Turno = "mañana" | "tarde"
+
+export interface CierreTurnoEmpleado {
+    usuarioId: string
+    usuarioNombre: string
+}
+
+// Desglose por fuente. Cada monto por método es neto (cuotas + ventas + ingresos extra − egresos).
+// En cierres previos a la migración "integrado", `desglose` viene como {} (se detecta con `cuotas` ausente).
+export interface DesgloseTurno {
+    cuotas: { efectivo: number; transferencia: number; total: number; cantidad: number; cobrosMixtos: number }
+    ventas: { efectivo: number; transferencia: number; total: number; cantidad: number }
+    ingresosExtra: { efectivo: number; transferencia: number; total: number }
+    egresos: { efectivo: number; transferencia: number; total: number }
+}
+
+export interface TotalesTurno {
+    totalPorMetodo: { efectivo: number; transferencia: number; mixto: number }
+    /** Total neto: cuotas + ventas + ingresos extra − egresos */
+    total: number
+    totalCuotas: number
+    totalVentas: number
+    totalIngresosExtra: number
+    totalEgresos: number
+    cantidadPagos: number
+    desglose: Partial<DesgloseTurno>
+    empleados: CierreTurnoEmpleado[]
+}
+
+export interface CierreTurno extends TotalesTurno {
+    id: string
+    fecha: string
+    turno: Turno
+    creadoPorNombre: string | null
+    createdAt: string
+}
+
+export interface EstadoTurno {
+    fecha: string
+    turno: Turno
+    turnoActual: Turno
+    cerrado: CierreTurno | null
+    enVivo: TotalesTurno | null
+}
