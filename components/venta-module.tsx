@@ -18,7 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
+import { TabsNav } from "@/components/tabs-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { PERMISOS } from "@/lib/permissions"
@@ -47,6 +48,7 @@ export function VentaModule() {
   const [productos, setProductos] = useState<Producto[]>([])
   const [loadingProductos, setLoadingProductos] = useState(true)
   const [cart, setCart] = useState<Map<string, CartLine>>(new Map())
+  const [tab, setTab] = useState<string>("vender")
 
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [busquedaCliente, setBusquedaCliente] = useState("")
@@ -207,11 +209,15 @@ export function VentaModule() {
         <p className="text-sm text-muted-foreground">Vendé productos del gimnasio.</p>
       </div>
 
-      <Tabs defaultValue="vender">
-        <TabsList>
-          <TabsTrigger value="vender">Vender</TabsTrigger>
-          <TabsTrigger value="reportes">Reportes</TabsTrigger>
-        </TabsList>
+      <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
+        <TabsNav
+          opciones={[
+            { value: "vender", label: "Vender" },
+            { value: "reportes", label: "Reportes" },
+          ]}
+          value={tab}
+          onValueChange={setTab}
+        />
 
         <TabsContent value="vender" className="flex flex-col gap-6">
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">

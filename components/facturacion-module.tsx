@@ -31,7 +31,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
+import { TabsNav, type OpcionTab } from "@/components/tabs-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { PERMISOS } from "@/lib/permissions"
@@ -112,6 +113,7 @@ export function FacturacionModule() {
   const [usuarioId, setUsuarioId] = useState<string>("todos")
   const [estado, setEstado] = useState<string>("todos")
   const [turno, setTurno] = useState<string>("todos")
+  const [tab, setTab] = useState<string>("movimientos")
   const [clienteQueryInput, setClienteQueryInput] = useState("")
   const [clienteQuery, setClienteQuery] = useState("")
 
@@ -213,6 +215,19 @@ export function FacturacionModule() {
     ]
   }, [stats])
 
+  const opcionesTabs: OpcionTab[] = [
+    { value: "movimientos", label: "Movimientos" },
+    { value: "morosos", label: "Morosos" },
+    { value: "por-vencer", label: "Por Vencer" },
+    ...(puedeVerCaja
+      ? [
+          { value: "egresos", label: "Egresos" },
+          { value: "caja-inicial", label: "Caja Inicial" },
+        ]
+      : []),
+    { value: "cierre-caja", label: "Cierre de Caja" },
+  ]
+
   const opcionesEmpleado = [
     { value: "todos", label: "Todos los empleados" },
     ...[...empleadosVistos.entries()].map(([id, nombre]) => ({ value: id, label: nombre })),
@@ -285,15 +300,8 @@ export function FacturacionModule() {
         </Card>
       </div>
 
-      <Tabs defaultValue="movimientos">
-        <TabsList>
-          <TabsTrigger value="movimientos">Movimientos</TabsTrigger>
-          <TabsTrigger value="morosos">Morosos</TabsTrigger>
-          <TabsTrigger value="por-vencer">Por Vencer</TabsTrigger>
-          {puedeVerCaja && <TabsTrigger value="egresos">Egresos</TabsTrigger>}
-          {puedeVerCaja && <TabsTrigger value="caja-inicial">Caja Inicial</TabsTrigger>}
-          <TabsTrigger value="cierre-caja">Cierre de Caja</TabsTrigger>
-        </TabsList>
+      <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
+        <TabsNav opciones={opcionesTabs} value={tab} onValueChange={setTab} />
 
         <TabsContent value="movimientos" className="flex flex-col gap-4">
       <Card>
