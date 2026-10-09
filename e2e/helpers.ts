@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
 import { expect } from "@playwright/test"
 
 export async function login(page: Page, email: string, password: string) {
@@ -18,6 +18,18 @@ export async function login(page: Page, email: string, password: string) {
 export async function logout(page: Page) {
   await page.getByRole("button", { name: "Cerrar sesión" }).click()
   await expect(page).toHaveURL(/\/login/)
+}
+
+/**
+ * Reemplaza el valor de un input de react-hook-form recién montado, tecla por tecla. Primero
+ * espera a que muestre su valor inicial: en dev, el ref de `register` puede escribirlo unos ms
+ * después de que el input ya es interactivo; si se limpió antes, ese valor aparece igual y lo
+ * tipeado queda delante (visto: tipear "22222" dejaba "2222245000").
+ */
+export async function reemplazarTipeando(input: Locator, valorInicial: string, valor: string) {
+  await expect(input).toHaveValue(valorInicial)
+  await input.fill("")
+  await input.pressSequentially(valor)
 }
 
 /** DNI de prueba único (siempre empieza con 99 para distinguirlo a simple vista). */

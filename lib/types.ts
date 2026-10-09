@@ -40,6 +40,11 @@ export interface Role {
     createdAt: string
 }
 
+export interface DesglosePago {
+    metodo: "efectivo" | "transferencia"
+    monto: number
+}
+
 export interface Pago {
     id: string
     clienteId: string
@@ -48,7 +53,8 @@ export interface Pago {
     usuarioId: string | null
     usuarioNombre: string
     monto: number
-    metodo: "efectivo" | "tarjeta" | "transferencia"
+    metodo: "efectivo" | "transferencia" | "mixto"
+    metodos: DesglosePago[]
     periodoDesde: string
     periodoHasta: string
     fechaPago: string
@@ -88,7 +94,7 @@ export interface ClientePorVencer {
 }
 
 export interface CierreCajaMetodo {
-    metodo: "efectivo" | "tarjeta" | "transferencia"
+    metodo: "efectivo" | "transferencia" | "mixto"
     monto: number
     cantidad: number
 }
@@ -107,4 +113,124 @@ export interface CierreCaja {
     porMetodo: CierreCajaMetodo[]
     porEmpleado: CierreCajaEmpleado[]
     anulados: { cantidad: number; monto: number }
+}
+
+// ---------------------------------------------------------------------------
+// Productos / Ventas / Caja
+// ---------------------------------------------------------------------------
+
+export interface Producto {
+    id: string
+    nombre: string
+    descripcion: string | null
+    categoria: string | null
+    precio: number
+    activo: boolean
+    controlaStock: boolean
+    stockActual: number | null
+    stockMinimo: number | null
+    createdAt: string
+    updatedAt: string
+}
+
+export interface VentaItem {
+    id: string
+    idProducto: string | null
+    nombreSnapshot: string
+    precioUnitario: number
+    cantidad: number
+    subtotal: number
+}
+
+export interface VentaPago {
+    id: string
+    metodo: "efectivo" | "transferencia"
+    monto: number
+}
+
+export interface Venta {
+    id: string
+    fechaHora: string
+    idUsuario: string | null
+    usuarioNombre: string | null
+    idCliente: string | null
+    clienteNombreCompleto: string | null
+    total: number
+    anulada: boolean
+    motivoAnulacion: string | null
+    anuladaPor: string | null
+    anuladaAt: string | null
+    createdAt: string
+    items: VentaItem[]
+    pagos: VentaPago[]
+}
+
+export interface VentaReporteProducto {
+    idProducto: string
+    nombre: string
+    unidades: number
+    ingreso: number
+}
+
+export interface VentaReporteDia {
+    fecha: string
+    cantidad: number
+    total: number
+}
+
+export interface VentaReporte {
+    porProducto: VentaReporteProducto[]
+    porDia: VentaReporteDia[]
+}
+
+export interface MovimientoCaja {
+    id: string
+    tipo: "egreso" | "ingreso_extra"
+    concepto: string
+    monto: number
+    metodo: "efectivo" | "transferencia"
+    fechaHora: string
+    idUsuario: string | null
+    usuarioNombre?: string
+    anulado: boolean
+    motivoAnulacion: string | null
+    anuladoPor: string | null
+    anuladoAt: string | null
+}
+
+export interface CajaApertura {
+    fecha: string
+    montoInicialEfectivo: number
+    idUsuario: string | null
+}
+
+export interface CierreCajaDesglose {
+    efectivo: number
+    transferencia: number
+    cantidad: number
+}
+
+export interface CierreCajaPorEmpleado {
+    usuarioId: string
+    usuarioNombre: string
+    cuotas: { monto: number; cantidad: number }
+    ventas: { monto: number; cantidad: number }
+}
+
+export interface CierreCajaCompleto {
+    fecha: string
+    aperturaInicialEfectivo: number
+    efectivoEsperado: number
+    transferenciasTotal: number
+    porTipo: {
+        cuotas: CierreCajaDesglose
+        ventas: CierreCajaDesglose
+        egresos: CierreCajaDesglose
+        ingresosExtra: CierreCajaDesglose
+    }
+    porEmpleado: CierreCajaPorEmpleado[]
+    anulados: {
+        cuotas: { cantidad: number; monto: number }
+        ventas: { cantidad: number; monto: number }
+    }
 }

@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest"
 import {
+  ajustarStockSchema,
+  anulacionSchema,
   aplicarErrorBackend,
+  cajaAperturaSchema,
   clienteSchema,
   cobroSchema,
   dniSchema,
@@ -8,8 +11,10 @@ import {
   fechaNacimientoSchema,
   loginSchema,
   montoSchema,
+  movimientoCajaSchema,
   nombreSchema,
   passwordSchema,
+  productoSchema,
   roleSchema,
   telefonoOpcionalSchema,
   usuarioCreateSchema,
@@ -224,11 +229,126 @@ describe("roleSchema", () => {
 
 describe("cobroSchema", () => {
   it("acepta un método válido", () => {
-    expect(cobroSchema.safeParse({ monto: 45000, metodo: "efectivo" }).success).toBe(true)
+    expect(cobroSchema.safeParse({ monto: 45000, metodoPago: "efectivo" }).success).toBe(true)
+    expect(cobroSchema.safeParse({ monto: 45000, metodoPago: "transferencia" }).success).toBe(true)
   })
 
   it("rechaza un método inválido", () => {
-    expect(cobroSchema.safeParse({ monto: 45000, metodo: "cheque" }).success).toBe(false)
+    expect(cobroSchema.safeParse({ monto: 45000, metodoPago: "tarjeta" }).success).toBe(false)
+  })
+
+  it("dividido: acepta cuando los dos montos suman el total", () => {
+    const result = cobroSchema.safeParse({
+      monto: 45000,
+      metodoPago: "dividido",
+      montoEfectivo: 20000,
+      montoTransferencia: 25000,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it("dividido: rechaza cuando los dos montos NO suman el total", () => {
+    const result = cobroSchema.safeParse({
+      monto: 45000,
+      metodoPago: "dividido",
+      montoEfectivo: 1000,
+      montoTransferencia: 1000,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it("dividido: rechaza cuando ambos montos están vacíos", () => {
+    const result = cobroSchema.safeParse({ monto: 45000, metodoPago: "dividido" })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe("productoSchema", () => {
+  it("acepta un producto válido con letras, números y espacios", () => {
+    const result = productoSchema.safeParse({
+      nombre: "Mancuerna 5kg",
+      precio: 1500,
+      controlaStock: false,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it("rechaza un nombre con guiones o apóstrofes", () => {
+    expect(productoSchema.safeParse({ nombre: "Pro-Teina", precio: 100, controlaStock: false }).success).toBe(false)
+  })
+
+  it("rechaza un precio igual a cero", () => {
+    expect(productoSchema.safeParse({ nombre: "Agua", precio: 0, controlaStock: false }).success).toBe(false)
+  })
+
+  it("acepta stockActual y stockMinimo cuando controlaStock es true", () => {
+    const result = productoSchema.safeParse({
+      nombre: "Agua",
+      precio: 1000,
+      controlaStock: true,
+      stockActual: 10,
+      stockMinimo: 2,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it("rechaza stock negativo", () => {
+    const result = productoSchema.safeParse({
+      nombre: "Agua",
+      precio: 1000,
+      controlaStock: true,
+      stockActual: -1,
+    })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe("ajustarStockSchema", () => {
+  it("acepta un delta entero positivo o negativo", () => {
+    expect(ajustarStockSchema.safeParse({ delta: 10 }).success).toBe(true)
+    expect(ajustarStockSchema.safeParse({ delta: -5 }).success).toBe(true)
+  })
+
+  it("rechaza un delta igual a cero", () => {
+    expect(ajustarStockSchema.safeParse({ delta: 0 }).success).toBe(false)
+  })
+
+  it("rechaza un delta no entero", () => {
+    expect(ajustarStockSchema.safeParse({ delta: 1.5 }).success).toBe(false)
+  })
+})
+
+describe("movimientoCajaSchema", () => {
+  it("acepta un egreso válido", () => {
+    const result = movimientoCajaSchema.safeParse({ concepto: "Limpieza", monto: 5000, metodo: "efectivo" })
+    expect(result.success).toBe(true)
+  })
+
+  it("rechaza un método inválido", () => {
+    expect(movimientoCajaSchema.safeParse({ concepto: "Limpieza", monto: 5000, metodo: "tarjeta" }).success).toBe(
+      false
+    )
+  })
+
+  it("rechaza un concepto vacío", () => {
+    expect(movimientoCajaSchema.safeParse({ concepto: "", monto: 5000, metodo: "efectivo" }).success).toBe(false)
+  })
+})
+
+describe("cajaAperturaSchema", () => {
+  it("acepta un monto en cero", () => {
+    expect(cajaAperturaSchema.safeParse({ montoInicialEfectivo: 0 }).success).toBe(true)
+  })
+
+  it("rechaza un monto negativo", () => {
+    expect(cajaAperturaSchema.safeParse({ montoInicialEfectivo: -1 }).success).toBe(false)
+  })
+})
+
+describe("anulacionSchema", () => {
+  it("exige al menos 3 caracteres de motivo", () => {
+    expect(anulacionSchema.safeParse({ motivo: "ab" }).success).toBe(false)
+    expect(anulacionSchema.safeParse({ motivo: "abc" }).success).toBe(true)
   })
 })
 

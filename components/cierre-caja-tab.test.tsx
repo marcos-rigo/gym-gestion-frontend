@@ -1,116 +1,115 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { CierreCajaTab } from "./cierre-caja-tab"
-import type { CierreCaja } from "@/lib/types"
+import type { CierreCajaCompleto } from "@/lib/types"
 import { hoyTucuman } from "@/lib/utils"
 
-const { getCierreCajaMock, toastMock } = vi.hoisted(() => ({ getCierreCajaMock: vi.fn(), toastMock: vi.fn() }))
+const { getCierreCajaCompletoMock, toastMock } = vi.hoisted(() => ({
+  getCierreCajaCompletoMock: vi.fn(),
+  toastMock: vi.fn(),
+}))
 
-vi.mock("@/services/pagos", () => ({ getCierreCaja: getCierreCajaMock }))
+vi.mock("@/services/caja", () => ({ getCierreCajaCompleto: getCierreCajaCompletoMock }))
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: toastMock }) }))
 
-function cierreVacio(fecha: string): CierreCaja {
+function cierreVacio(fecha: string): CierreCajaCompleto {
   return {
     fecha,
-    general: { monto: 0, cantidad: 0 },
-    porMetodo: [],
+    aperturaInicialEfectivo: 0,
+    efectivoEsperado: 0,
+    transferenciasTotal: 0,
+    porTipo: {
+      cuotas: { efectivo: 0, transferencia: 0, cantidad: 0 },
+      ventas: { efectivo: 0, transferencia: 0, cantidad: 0 },
+      egresos: { efectivo: 0, transferencia: 0, cantidad: 0 },
+      ingresosExtra: { efectivo: 0, transferencia: 0, cantidad: 0 },
+    },
     porEmpleado: [],
-    anulados: { cantidad: 0, monto: 0 },
+    anulados: { cuotas: { cantidad: 0, monto: 0 }, ventas: { cantidad: 0, monto: 0 } },
   }
 }
 
 describe("CierreCajaTab", () => {
   afterEach(() => {
-    getCierreCajaMock.mockReset()
+    getCierreCajaCompletoMock.mockReset()
   })
 
   it('el selector de fecha arranca en "hoy" según la zona horaria de Tucumán', async () => {
-    getCierreCajaMock.mockResolvedValue(cierreVacio(hoyTucuman()))
+    getCierreCajaCompletoMock.mockResolvedValue(cierreVacio(hoyTucuman()))
     render(<CierreCajaTab />)
 
-    await waitFor(() => expect(getCierreCajaMock).toHaveBeenCalledWith(hoyTucuman()))
+    await waitFor(() => expect(getCierreCajaCompletoMock).toHaveBeenCalledWith(hoyTucuman()))
     expect(screen.getByLabelText("Fecha")).toHaveValue(hoyTucuman())
   })
 
-  it('muestra "No hubo movimientos este día." cuando no hay pagos ni anulados', async () => {
-    getCierreCajaMock.mockResolvedValue(cierreVacio(hoyTucuman()))
+  it("sin movimientos ni anulados, muestra la fórmula en cero en vez de una pantalla vacía", async () => {
+    getCierreCajaCompletoMock.mockResolvedValue(cierreVacio(hoyTucuman()))
     render(<CierreCajaTab />)
 
-    await waitFor(() => expect(screen.getByText("No hubo movimientos este día.")).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText("Efectivo Esperado")).toBeInTheDocument())
+    expect(screen.getByText("Sin movimientos por empleado.")).toBeInTheDocument()
+    expect(screen.queryByText("Anulados del Día")).not.toBeInTheDocument()
   })
 
-  it("muestra el total del día, el desglose por método y el acordeón por empleado", async () => {
-    const cierre: CierreCaja = {
+  it("muestra el efectivo esperado, las transferencias y el desglose por empleado", async () => {
+    const cierre: CierreCajaCompleto = {
       fecha: hoyTucuman(),
-      general: { monto: 90000, cantidad: 2 },
-      porMetodo: [
-        { metodo: "efectivo", monto: 45000, cantidad: 1 },
-        { metodo: "tarjeta", monto: 45000, cantidad: 1 },
-      ],
+      aperturaInicialEfectivo: 1000,
+      efectivoEsperado: 46000,
+      transferenciasTotal: 0,
+      porTipo: {
+        cuotas: { efectivo: 45000, transferencia: 0, cantidad: 1 },
+        ventas: { efectivo: 0, transferencia: 0, cantidad: 0 },
+        egresos: { efectivo: 0, transferencia: 0, cantidad: 0 },
+        ingresosExtra: { efectivo: 0, transferencia: 0, cantidad: 0 },
+      },
       porEmpleado: [
-        {
-          usuarioId: "u1",
-          usuarioNombre: "Zze2e Empleado",
-          monto: 45000,
-          cantidad: 1,
-          porMetodo: [{ metodo: "efectivo", monto: 45000, cantidad: 1 }],
-        },
-        {
-          usuarioId: "u2",
-          usuarioNombre: "Zze2e Dueño",
-          monto: 45000,
-          cantidad: 1,
-          porMetodo: [{ metodo: "tarjeta", monto: 45000, cantidad: 1 }],
-        },
+        { usuarioId: "u1", usuarioNombre: "Zze2e Empleado", cuotas: { monto: 45000, cantidad: 1 }, ventas: { monto: 0, cantidad: 0 } },
       ],
-      anulados: { cantidad: 0, monto: 0 },
+      anulados: { cuotas: { cantidad: 0, monto: 0 }, ventas: { cantidad: 0, monto: 0 } },
     }
-    getCierreCajaMock.mockResolvedValue(cierre)
+    getCierreCajaCompletoMock.mockResolvedValue(cierre)
 
     render(<CierreCajaTab />)
 
-    await waitFor(() => expect(screen.getByText("$ 90.000,00")).toBeInTheDocument())
-    expect(screen.getByText("2 pagos")).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText("$ 46.000,00")).toBeInTheDocument())
     expect(screen.getAllByText("Zze2e Empleado").length).toBeGreaterThan(0)
-    expect(screen.getAllByText("Zze2e Dueño").length).toBeGreaterThan(0)
   })
 
-  it('muestra "Anulados del Día" sin que el monto anulado sume al total', async () => {
-    const cierre: CierreCaja = {
+  it('muestra "Anulados del Día" por separado, cuotas y ventas', async () => {
+    const cierre: CierreCajaCompleto = {
       fecha: hoyTucuman(),
-      general: { monto: 45000, cantidad: 1 },
-      porMetodo: [{ metodo: "efectivo", monto: 45000, cantidad: 1 }],
+      aperturaInicialEfectivo: 0,
+      efectivoEsperado: 45000,
+      transferenciasTotal: 0,
+      porTipo: {
+        cuotas: { efectivo: 45000, transferencia: 0, cantidad: 1 },
+        ventas: { efectivo: 0, transferencia: 0, cantidad: 0 },
+        egresos: { efectivo: 0, transferencia: 0, cantidad: 0 },
+        ingresosExtra: { efectivo: 0, transferencia: 0, cantidad: 0 },
+      },
       porEmpleado: [
-        {
-          usuarioId: "u1",
-          usuarioNombre: "Zze2e Empleado",
-          monto: 45000,
-          cantidad: 1,
-          porMetodo: [{ metodo: "efectivo", monto: 45000, cantidad: 1 }],
-        },
+        { usuarioId: "u1", usuarioNombre: "Zze2e Empleado", cuotas: { monto: 45000, cantidad: 1 }, ventas: { monto: 0, cantidad: 0 } },
       ],
-      anulados: { cantidad: 1, monto: 20000 },
+      anulados: { cuotas: { cantidad: 1, monto: 20000 }, ventas: { cantidad: 0, monto: 0 } },
     }
-    getCierreCajaMock.mockResolvedValue(cierre)
+    getCierreCajaCompletoMock.mockResolvedValue(cierre)
 
     render(<CierreCajaTab />)
 
     await waitFor(() => expect(screen.getByText("Anulados del Día")).toBeInTheDocument())
     expect(screen.getByText("$ 20.000,00")).toBeInTheDocument()
     expect(screen.getByText("1 pago (no suman al total)")).toBeInTheDocument()
-    // El total general no debe incluir el monto anulado (aparece en el total, el método y el empleado).
-    expect(screen.getAllByText("$ 45.000,00").length).toBeGreaterThanOrEqual(2)
-    expect(screen.queryByText("$ 65.000,00")).not.toBeInTheDocument()
   })
 
   it("cambiar la fecha vuelve a pedir el cierre para la nueva fecha", async () => {
-    getCierreCajaMock.mockResolvedValue(cierreVacio(hoyTucuman()))
+    getCierreCajaCompletoMock.mockResolvedValue(cierreVacio(hoyTucuman()))
     render(<CierreCajaTab />)
-    await waitFor(() => expect(getCierreCajaMock).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(getCierreCajaCompletoMock).toHaveBeenCalledTimes(1))
 
     const input = screen.getByLabelText("Fecha")
     fireEvent.change(input, { target: { value: "2026-01-05" } })
 
-    await waitFor(() => expect(getCierreCajaMock).toHaveBeenLastCalledWith("2026-01-05"))
+    await waitFor(() => expect(getCierreCajaCompletoMock).toHaveBeenLastCalledWith("2026-01-05"))
   })
 })

@@ -7,7 +7,7 @@ import { expect, test } from "@playwright/test"
 import { pool } from "./db"
 import { loadFixtures } from "./fixtures"
 import { PASSWORD } from "./global-setup"
-import { dniDePrueba, login, logout } from "./helpers"
+import { dniDePrueba, login, logout, reemplazarTipeando } from "./helpers"
 
 const fx = loadFixtures()
 const admin = fx.usuarios.find((u) => u.rol === "admin")!
@@ -104,6 +104,7 @@ test("2. un cliente TEST_ moroso muestra los días de atraso correctos; el cobro
   await expect(fila.getByText("$ 44.444,00")).toBeVisible()
 
   await fila.getByRole("button", { name: "Registrar pago" }).click()
+  await page.getByRole("button", { name: "Efectivo" }).click()
   await page.getByRole("button", { name: "Registrar cobro" }).click()
   await expect(page.getByText("Cobro registrado")).toBeVisible()
 
@@ -169,30 +170,34 @@ test("4. Cierre de Caja: dos métodos y dos empleados cierran, y una fecha sin p
   const { dni: dniCliente } = await crearClienteTest(30)
   const empleado = await crearEmpleadoTest()
 
-  // Cobro 1: admin, efectivo.
+  // El Cierre de Caja integrado agrega TODAS las cuotas/ventas/caja del día (no solo
+  // las de este test), así que las cards agregadas se comparan por delta.
   await login(page, fx.credenciales.admin.email, fx.credenciales.admin.password)
   await page.goto("/dashboard/facturacion")
+  await page.getByRole("tab", { name: "Cierre de Caja" }).click()
+  const efectivoCard = cardPorTitulo(page, "Efectivo Esperado")
+  const transferenciasCard = cardPorTitulo(page, "Transferencias")
+  const efectivoAntes = parseCurrency(await efectivoCard.innerText())
+  const transferenciaAntes = parseCurrency(await transferenciasCard.innerText())
+
+  // Cobro 1: admin, efectivo.
   await page.getByRole("button", { name: "Registrar Pago" }).click()
   await page.getByPlaceholder("Buscar por nombre o DNI...").fill(dniCliente)
   await page.getByText(dniCliente).click()
-  const monto1 = page.getByLabel("Monto *")
-  await monto1.fill("")
-  await monto1.pressSequentially("11111")
+  await reemplazarTipeando(page.getByLabel("Monto *"), "45000", "11111")
+  await page.getByRole("button", { name: "Efectivo" }).click()
   await page.getByRole("button", { name: "Registrar pago", exact: true }).click()
   await expect(page.getByText("Pago registrado")).toBeVisible()
   await logout(page)
 
-  // Cobro 2: empleado, tarjeta.
+  // Cobro 2: empleado, transferencia.
   await login(page, empleado.email, empleado.password)
   await page.goto("/dashboard/facturacion")
   await page.getByRole("button", { name: "Registrar Pago" }).click()
   await page.getByPlaceholder("Buscar por nombre o DNI...").fill(dniCliente)
   await page.getByText(dniCliente).click()
-  const monto2 = page.getByLabel("Monto *")
-  await monto2.fill("")
-  await monto2.pressSequentially("22222")
-  await page.getByLabel("Método de pago *").click()
-  await page.getByRole("option", { name: "Tarjeta" }).click()
+  await reemplazarTipeando(page.getByLabel("Monto *"), "45000", "22222")
+  await page.getByRole("button", { name: "Transferencia" }).click()
   await page.getByRole("button", { name: "Registrar pago", exact: true }).click()
   await expect(page.getByText("Pago registrado")).toBeVisible()
   await logout(page)
@@ -202,9 +207,12 @@ test("4. Cierre de Caja: dos métodos y dos empleados cierran, y una fecha sin p
   await page.goto("/dashboard/facturacion")
   await page.getByRole("tab", { name: "Cierre de Caja" }).click()
 
-  const metodoCard = cardPorTitulo(page, "Por Método de Pago")
-  await expect(metodoCard.getByText("Efectivo", { exact: true })).toBeVisible()
-  await expect(metodoCard.getByText("Tarjeta", { exact: true })).toBeVisible()
+  await expect(async () => {
+    const efectivoDespues = parseCurrency(await efectivoCard.innerText())
+    expect(efectivoDespues - efectivoAntes).toBe(11111)
+  }).toPass()
+  const transferenciaDespues = parseCurrency(await transferenciasCard.innerText())
+  expect(transferenciaDespues - transferenciaAntes).toBe(22222)
 
   // "Zze2e Admin" y el empleado TEST_ son usuarios frescos de esta corrida: su fila en
   // Por Empleado no puede arrastrar pagos de otra ejecución ni de datos reales.
@@ -213,9 +221,10 @@ test("4. Cierre de Caja: dos métodos y dos empleados cierran, y una fecha sin p
   await expect(filaAdmin).toContainText("$ 11.111,00")
   await expect(filaEmpleado).toContainText("$ 22.222,00")
 
-  // Una fecha sin movimientos muestra el estado vacío.
+  // Una fecha sin movimientos muestra la fórmula en cero, no una pantalla vacía.
   await page.getByLabel("Fecha").fill("2015-01-01")
-  await expect(page.getByText("No hubo movimientos este día.")).toBeVisible()
+  await expect(efectivoCard).toContainText("$ 0,00")
+  await expect(page.getByText("Sin movimientos por empleado.")).toBeVisible()
 })
 
 test("5. un Empleado solo ve sus propios cobros en Por Empleado del Cierre de Caja", async ({ page }) => {
@@ -227,9 +236,8 @@ test("5. un Empleado solo ve sus propios cobros en Por Empleado del Cierre de Ca
   await page.getByRole("button", { name: "Registrar Pago" }).click()
   await page.getByPlaceholder("Buscar por nombre o DNI...").fill(dniCliente)
   await page.getByText(dniCliente).click()
-  const monto = page.getByLabel("Monto *")
-  await monto.fill("")
-  await monto.pressSequentially("27000")
+  await reemplazarTipeando(page.getByLabel("Monto *"), "45000", "27000")
+  await page.getByRole("button", { name: "Efectivo" }).click()
   await page.getByRole("button", { name: "Registrar pago", exact: true }).click()
   await expect(page.getByText("Pago registrado")).toBeVisible()
 
@@ -247,9 +255,8 @@ test("6. anular un pago de hoy lo baja del total y lo muestra en Anulados del D�
   await page.getByRole("button", { name: "Registrar Pago" }).click()
   await page.getByPlaceholder("Buscar por nombre o DNI...").fill(dniCliente)
   await page.getByText(dniCliente).click()
-  const monto = page.getByLabel("Monto *")
-  await monto.fill("")
-  await monto.pressSequentially("55555")
+  await reemplazarTipeando(page.getByLabel("Monto *"), "45000", "55555")
+  await page.getByRole("button", { name: "Efectivo" }).click()
   await page.getByRole("button", { name: "Registrar pago", exact: true }).click()
   await expect(page.getByText("Pago registrado")).toBeVisible()
 
@@ -268,8 +275,8 @@ test("6. anular un pago de hoy lo baja del total y lo muestra en Anulados del D�
   await expect(anuladosCard).toContainText("$ 55.555,00")
   await expect(anuladosCard).toContainText("1 pago (no suman al total)")
 
-  const totalCard = cardPorTitulo(page, "Total del Día")
-  await expect(totalCard).not.toContainText("$ 55.555,00")
+  const efectivoCard = cardPorTitulo(page, "Efectivo Esperado")
+  await expect(efectivoCard).not.toContainText("$ 55.555,00")
 })
 
 test("6b. solo el pago vigente más reciente de un cliente muestra el botón Anular", async ({ page }) => {
@@ -281,9 +288,8 @@ test("6b. solo el pago vigente más reciente de un cliente muestra el botón Anu
   await page.getByRole("button", { name: "Registrar Pago" }).click()
   await page.getByPlaceholder("Buscar por nombre o DNI...").fill(dniCliente)
   await page.getByText(dniCliente).click()
-  const monto = page.getByLabel("Monto *")
-  await monto.fill("")
-  await monto.pressSequentially("22222")
+  await reemplazarTipeando(page.getByLabel("Monto *"), "45000", "22222")
+  await page.getByRole("button", { name: "Efectivo" }).click()
   await page.getByRole("button", { name: "Registrar pago", exact: true }).click()
   await expect(page.getByText("Pago registrado")).toBeVisible()
 
@@ -351,6 +357,7 @@ test.describe("8. mobile", () => {
     const dialogo = page.getByRole("dialog")
     await dialogo.getByPlaceholder("Buscar por nombre o DNI...").fill(moroso.dni)
     await dialogo.getByText(moroso.dni).click()
+    await dialogo.getByRole("button", { name: "Efectivo" }).click()
     await dialogo.getByRole("button", { name: "Registrar pago", exact: true }).click()
     await expect(page.getByText("Pago registrado")).toBeVisible()
 

@@ -28,6 +28,9 @@ test("cada tarjeta del dashboard coincide con /api/dashboard/stats y /api/pagos/
   await expect(page.getByText("Por Vencer (7 días)").locator("../..")).toContainText(String(stats.porVencer))
   await expect(page.getByText("Morosos").locator("../..")).toContainText(String(stats.morosos))
   await expect(page.getByText("Nuevos este mes").locator("../..")).toContainText(String(stats.nuevosMes))
+  await expect(page.getByText("Ventas de hoy").locator("../..")).toContainText(
+    currency.format(stats.ventasHoyTotal ?? 0)
+  )
 
   await expect(page.getByText("Facturación Hoy").locator("../..")).toContainText(currency.format(facturacion.hoy))
   await expect(page.getByText("Esta Semana").locator("../..")).toContainText(currency.format(facturacion.semana))

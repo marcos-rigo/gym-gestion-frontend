@@ -4,27 +4,27 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { FacturacionModule } from "./facturacion-module"
 import type { Pago, StatsFacturacion } from "@/lib/types"
 
-const { useAuthMock, getPagosMock, getStatsFacturacionMock, getMorososMock, getPorVencerMock, getCierreCajaMock } =
+const { useAuthMock, getPagosMock, getStatsFacturacionMock, getMorososMock, getPorVencerMock, getCierreCajaCompletoMock } =
   vi.hoisted(() => ({
     useAuthMock: vi.fn(),
     getPagosMock: vi.fn(),
     getStatsFacturacionMock: vi.fn(),
     getMorososMock: vi.fn(),
     getPorVencerMock: vi.fn(),
-    getCierreCajaMock: vi.fn(),
+    getCierreCajaCompletoMock: vi.fn(),
   }))
 
 vi.mock("@/contexts/auth-context", () => ({ useAuth: useAuthMock }))
 vi.mock("@/services/pagos", () => ({
   getPagos: getPagosMock,
   getStatsFacturacion: getStatsFacturacionMock,
-  getCierreCaja: getCierreCajaMock,
 }))
 vi.mock("@/services/clientes", () => ({
   getMorosos: getMorososMock,
   getPorVencer: getPorVencerMock,
   getClientes: vi.fn().mockResolvedValue([]),
 }))
+vi.mock("@/services/caja", () => ({ getCierreCajaCompleto: getCierreCajaCompletoMock }))
 
 const stats: StatsFacturacion = {
   hoy: 0,
@@ -47,7 +47,7 @@ describe("FacturacionModule", () => {
     getStatsFacturacionMock.mockReset()
     getMorososMock.mockReset()
     getPorVencerMock.mockReset()
-    getCierreCajaMock.mockReset()
+    getCierreCajaCompletoMock.mockReset()
     useAuthMock.mockReset()
   })
 
@@ -57,12 +57,19 @@ describe("FacturacionModule", () => {
     getPagosMock.mockResolvedValue({ data: [], meta: { total: 0 } })
     getMorososMock.mockResolvedValue({ data: [], meta: { total: 0, totalAdeudado: 0 } })
     getPorVencerMock.mockResolvedValue({ data: [], meta: { total: 0, proyeccionIngresos: 0 } })
-    getCierreCajaMock.mockResolvedValue({
+    getCierreCajaCompletoMock.mockResolvedValue({
       fecha: "2026-01-01",
-      general: { monto: 0, cantidad: 0 },
-      porMetodo: [],
+      aperturaInicialEfectivo: 0,
+      efectivoEsperado: 0,
+      transferenciasTotal: 0,
+      porTipo: {
+        cuotas: { efectivo: 0, transferencia: 0, cantidad: 0 },
+        ventas: { efectivo: 0, transferencia: 0, cantidad: 0 },
+        egresos: { efectivo: 0, transferencia: 0, cantidad: 0 },
+        ingresosExtra: { efectivo: 0, transferencia: 0, cantidad: 0 },
+      },
       porEmpleado: [],
-      anulados: { cantidad: 0, monto: 0 },
+      anulados: { cuotas: { cantidad: 0, monto: 0 }, ventas: { cantidad: 0, monto: 0 } },
     })
 
     render(<FacturacionModule />)
@@ -96,12 +103,19 @@ describe("FacturacionModule", () => {
     getPagosMock.mockResolvedValue({ data: [], meta: { total: 0 } })
     getMorososMock.mockResolvedValue({ data: [], meta: { total: 0, totalAdeudado: 0 } })
     getPorVencerMock.mockResolvedValue({ data: [], meta: { total: 0, proyeccionIngresos: 0 } })
-    getCierreCajaMock.mockResolvedValue({
+    getCierreCajaCompletoMock.mockResolvedValue({
       fecha: "2026-01-01",
-      general: { monto: 0, cantidad: 0 },
-      porMetodo: [],
+      aperturaInicialEfectivo: 0,
+      efectivoEsperado: 0,
+      transferenciasTotal: 0,
+      porTipo: {
+        cuotas: { efectivo: 0, transferencia: 0, cantidad: 0 },
+        ventas: { efectivo: 0, transferencia: 0, cantidad: 0 },
+        egresos: { efectivo: 0, transferencia: 0, cantidad: 0 },
+        ingresosExtra: { efectivo: 0, transferencia: 0, cantidad: 0 },
+      },
       porEmpleado: [],
-      anulados: { cantidad: 0, monto: 0 },
+      anulados: { cuotas: { cantidad: 0, monto: 0 }, ventas: { cantidad: 0, monto: 0 } },
     })
 
     const user = userEvent.setup()
@@ -115,7 +129,7 @@ describe("FacturacionModule", () => {
     await waitFor(() => expect(getPorVencerMock).toHaveBeenCalled())
 
     await user.click(screen.getByRole("tab", { name: "Cierre de Caja" }))
-    await waitFor(() => expect(getCierreCajaMock).toHaveBeenCalled())
+    await waitFor(() => expect(getCierreCajaCompletoMock).toHaveBeenCalled())
   })
 
   it("solo muestra Anular pago en el pago vigente más reciente de cada cliente", async () => {
@@ -132,6 +146,7 @@ describe("FacturacionModule", () => {
         usuarioNombre: "Ana",
         monto: 45000,
         metodo: "efectivo",
+        metodos: [{ metodo: "efectivo", monto: 45000 }],
         periodoDesde: "2026-02-01",
         periodoHasta: "2026-03-01",
         fechaPago: "2026-02-01T10:00:00.000Z",
@@ -149,6 +164,7 @@ describe("FacturacionModule", () => {
         usuarioNombre: "Ana",
         monto: 45000,
         metodo: "efectivo",
+        metodos: [{ metodo: "efectivo", monto: 45000 }],
         periodoDesde: "2026-01-01",
         periodoHasta: "2026-02-01",
         fechaPago: "2026-01-01T10:00:00.000Z",
@@ -165,7 +181,8 @@ describe("FacturacionModule", () => {
         usuarioId: "u1",
         usuarioNombre: "Ana",
         monto: 30000,
-        metodo: "tarjeta",
+        metodo: "transferencia",
+        metodos: [{ metodo: "transferencia", monto: 30000 }],
         periodoDesde: "2026-01-15",
         periodoHasta: "2026-02-15",
         fechaPago: "2026-01-15T10:00:00.000Z",
@@ -178,7 +195,8 @@ describe("FacturacionModule", () => {
     getPagosMock.mockResolvedValue({ data: pagos, meta: { total: 3 } })
 
     render(<FacturacionModule />)
-    await waitFor(() => expect(screen.getAllByRole("row").length).toBeGreaterThan(1))
+    // Header + 3 pagos. `> 1` no alcanza: header + la fila del spinner de carga ya son 2.
+    await waitFor(() => expect(screen.getAllByRole("row")).toHaveLength(4))
 
     // Las filas se renderizan en el mismo orden que llegan (fecha_pago DESC del back).
     const [filaMasReciente, filaVieja, filaOtroCliente] = screen.getAllByRole("row").slice(1)

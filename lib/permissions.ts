@@ -15,6 +15,15 @@ export const PERMISOS = {
   ROLES_EDITAR: "roles_editar",
   ROLES_ELIMINAR: "roles_eliminar",
   ESTADISTICAS_VER: "estadisticas_ver",
+  PRODUCTOS_VER: "productos_ver",
+  PRODUCTOS_CREAR: "productos_crear",
+  PRODUCTOS_EDITAR: "productos_editar",
+  PRODUCTOS_ELIMINAR: "productos_eliminar",
+  VENTAS_VER: "ventas_ver",
+  VENTAS_REGISTRAR: "ventas_registrar",
+  VENTAS_ANULAR: "ventas_anular",
+  CAJA_VER: "caja_ver",
+  CAJA_MOVIMIENTOS: "caja_movimientos",
 } as const
 
 export type Permiso = (typeof PERMISOS)[keyof typeof PERMISOS]
@@ -36,6 +45,15 @@ export const PERMISOS_GYM: { id: Permiso; label: string; category: string }[] = 
   { id: PERMISOS.ROLES_EDITAR, label: "Editar Roles", category: "Roles" },
   { id: PERMISOS.ROLES_ELIMINAR, label: "Eliminar Roles", category: "Roles" },
   { id: PERMISOS.ESTADISTICAS_VER, label: "Ver Estadísticas", category: "Estadísticas" },
+  { id: PERMISOS.PRODUCTOS_VER, label: "Ver Productos", category: "Productos" },
+  { id: PERMISOS.PRODUCTOS_CREAR, label: "Crear Productos", category: "Productos" },
+  { id: PERMISOS.PRODUCTOS_EDITAR, label: "Editar Productos", category: "Productos" },
+  { id: PERMISOS.PRODUCTOS_ELIMINAR, label: "Desactivar Productos", category: "Productos" },
+  { id: PERMISOS.VENTAS_VER, label: "Ver Ventas", category: "Ventas" },
+  { id: PERMISOS.VENTAS_REGISTRAR, label: "Registrar Ventas", category: "Ventas" },
+  { id: PERMISOS.VENTAS_ANULAR, label: "Anular Ventas", category: "Ventas" },
+  { id: PERMISOS.CAJA_VER, label: "Ver Caja", category: "Caja" },
+  { id: PERMISOS.CAJA_MOVIMIENTOS, label: "Registrar Egresos/Ingresos de Caja", category: "Caja" },
 ]
 
 /**
@@ -55,6 +73,8 @@ export const RUTAS_PROTEGIDAS = {
   FACTURACION: { href: "/dashboard/facturacion", permiso: PERMISOS.FACTURACION_VER as Permiso | undefined, soloAdmin: false },
   USUARIOS: { href: "/dashboard/usuarios", permiso: undefined as Permiso | undefined, soloAdmin: true },
   ROLES: { href: "/dashboard/roles", permiso: PERMISOS.ROLES_VER as Permiso | undefined, soloAdmin: false },
+  PRODUCTOS: { href: "/dashboard/productos", permiso: PERMISOS.PRODUCTOS_VER as Permiso | undefined, soloAdmin: false },
+  VENTAS: { href: "/dashboard/ventas", permiso: PERMISOS.VENTAS_VER as Permiso | undefined, soloAdmin: false },
 } as const
 
 export function puedeAcceder(
@@ -72,6 +92,8 @@ export function primeraRutaAccesible(ctx: { esAdmin: boolean; permisos: string[]
     RUTAS_PROTEGIDAS.DASHBOARD,
     RUTAS_PROTEGIDAS.CLIENTES,
     RUTAS_PROTEGIDAS.FACTURACION,
+    RUTAS_PROTEGIDAS.VENTAS,
+    RUTAS_PROTEGIDAS.PRODUCTOS,
     RUTAS_PROTEGIDAS.USUARIOS,
     RUTAS_PROTEGIDAS.ROLES,
   ]

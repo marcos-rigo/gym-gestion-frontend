@@ -65,13 +65,16 @@ export function MorososTab({ onCobroRegistrado }: MorososTabProps) {
   const [query, setQuery] = useState("")
   const [cobrando, setCobrando] = useState<ClienteMoroso | null>(null)
 
+  // Sin el early return, al montar se resetea a la página 1 a los 300 ms y pisa un "Siguiente" hecho antes.
   useEffect(() => {
+    const next = queryInput.trim()
+    if (next === query) return
     const t = setTimeout(() => {
-      setQuery(queryInput.trim())
+      setQuery(next)
       setPage(1)
     }, 300)
     return () => clearTimeout(t)
-  }, [queryInput])
+  }, [queryInput, query])
 
   const fetchMorosos = useCallback(() => {
     getMorosos({ query: query || undefined, page, pageSize: PAGE_SIZE })

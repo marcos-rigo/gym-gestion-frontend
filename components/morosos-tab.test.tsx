@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { MorososTab } from "./morosos-tab"
@@ -73,6 +73,24 @@ describe("MorososTab", () => {
     )
     // El debounce colapsa las teclas intermedias: no un fetch por cada una.
     expect(getMorososMock.mock.calls.length).toBeLessThan("Juan".length + 1)
+  })
+
+  it("un Siguiente hecho antes de que venzan los 300 ms del debounce inicial no se revierte a la página 1", async () => {
+    // Timers falsos: hace determinístico un bug que con timers reales solo aparecía bajo carga.
+    // No se usan waitFor/findBy acá porque dependen de setTimeout reales para drenar microtasks.
+    vi.useFakeTimers()
+    try {
+      getMorososMock.mockResolvedValue({ data: [moroso()], meta: { total: 25, totalAdeudado: 45000 } })
+      render(<MorososTab onCobroRegistrado={vi.fn()} />)
+      for (let i = 0; i < 5; i++) await act(() => vi.advanceTimersByTimeAsync(0))
+
+      fireEvent.click(screen.getByRole("button", { name: "Siguiente" }))
+      await act(() => vi.advanceTimersByTimeAsync(400))
+
+      expect(getMorososMock).toHaveBeenLastCalledWith({ query: undefined, page: 2, pageSize: 20 })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("paginación: Siguiente pide la página 2 y Anterior vuelve a la 1", async () => {

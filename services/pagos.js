@@ -12,6 +12,7 @@ function normalizePago(raw) {
     usuarioNombre: raw.usuarioNombre ?? '',
     monto: Number(raw.monto),
     metodo: raw.metodo,
+    metodos: (raw.metodos ?? []).map((m) => ({ metodo: m.metodo, monto: Number(m.monto) })),
     periodoDesde: raw.periodoDesde,
     periodoHasta: raw.periodoHasta,
     fechaPago: raw.fechaPago,
@@ -22,8 +23,13 @@ function normalizePago(raw) {
   }
 }
 
-export function registrarPago({ clienteId, monto, metodo }) {
-  return apiClient('/pagos', { method: 'POST', body: JSON.stringify({ clienteId, monto, metodo }) })
+/**
+ * @param {{ clienteId: string, monto: number, metodo?: 'efectivo'|'transferencia', pagos?: {metodo: string, monto: number}[] }} data
+ * Mandá `metodo` para un cobro de un solo método, o `pagos` (2 elementos) para un cobro dividido.
+ */
+export function registrarPago({ clienteId, monto, metodo, pagos }) {
+  const body = pagos ? { clienteId, monto, pagos } : { clienteId, monto, metodo }
+  return apiClient('/pagos', { method: 'POST', body: JSON.stringify(body) })
 }
 
 export async function getPagosCliente(clienteId) {

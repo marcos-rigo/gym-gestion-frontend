@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Ban, Loader2, Plus, Search, TrendingDown, TrendingUp } from "lucide-react"
 
 import { AnularPagoDialog } from "@/components/anular-pago-dialog"
+import { CajaAperturaTab } from "@/components/caja-apertura-tab"
+import { CierreCajaCuotasTab } from "@/components/cierre-caja-cuotas-tab"
 import { CierreCajaTab } from "@/components/cierre-caja-tab"
+import { EgresosTab } from "@/components/egresos-tab"
 import { MorososTab } from "@/components/morosos-tab"
 import { PorVencerTab } from "@/components/por-vencer-tab"
 import { RegistrarPagoDialog } from "@/components/registrar-pago-dialog"
@@ -42,8 +45,8 @@ const percentFormatter = new Intl.NumberFormat("es-AR", { style: "percent", maxi
 
 const metodoLabel: Record<Pago["metodo"], string> = {
   efectivo: "Efectivo",
-  tarjeta: "Tarjeta",
   transferencia: "Transferencia",
+  mixto: "Mixto",
 }
 
 function variacion(actual: number, anterior: number) {
@@ -71,6 +74,7 @@ export function FacturacionModule() {
   const { esAdmin, permisos } = useAuth()
   const puedeCobrar = esAdmin || permisos.includes(PERMISOS.FACTURACION_COBRAR)
   const puedeAnular = esAdmin || permisos.includes(PERMISOS.FACTURACION_ANULAR)
+  const puedeVerCaja = esAdmin || permisos.includes(PERMISOS.CAJA_VER)
 
   const [stats, setStats] = useState<StatsFacturacion | null>(null)
   const [pagos, setPagos] = useState<Pago[]>([])
@@ -91,13 +95,16 @@ export function FacturacionModule() {
   const [empleadosVistos, setEmpleadosVistos] = useState<Map<string, string>>(new Map())
 
   // Debounce de la búsqueda por cliente: evita un request por cada tecla.
+  // El early return evita que, al montar, se resetee a la página 1 a los 300 ms pisando un "Siguiente".
   useEffect(() => {
+    const next = clienteQueryInput.trim()
+    if (next === clienteQuery) return
     const t = setTimeout(() => {
-      setClienteQuery(clienteQueryInput.trim())
+      setClienteQuery(next)
       setPage(1)
     }, 300)
     return () => clearTimeout(t)
-  }, [clienteQueryInput])
+  }, [clienteQueryInput, clienteQuery])
 
   const fetchStats = useCallback(() => {
     getStatsFacturacion()
@@ -252,6 +259,8 @@ export function FacturacionModule() {
           <TabsTrigger value="movimientos">Movimientos</TabsTrigger>
           <TabsTrigger value="morosos">Morosos</TabsTrigger>
           <TabsTrigger value="por-vencer">Por Vencer</TabsTrigger>
+          {puedeVerCaja && <TabsTrigger value="egresos">Egresos</TabsTrigger>}
+          {puedeVerCaja && <TabsTrigger value="caja-inicial">Caja Inicial</TabsTrigger>}
           <TabsTrigger value="cierre-caja">Cierre de Caja</TabsTrigger>
         </TabsList>
 
@@ -298,8 +307,8 @@ export function FacturacionModule() {
             <SelectContent>
               <SelectItem value="todos">Todos los métodos</SelectItem>
               <SelectItem value="efectivo">Efectivo</SelectItem>
-              <SelectItem value="tarjeta">Tarjeta</SelectItem>
               <SelectItem value="transferencia">Transferencia</SelectItem>
+              <SelectItem value="mixto">Mixto</SelectItem>
             </SelectContent>
           </Select>
           <Select
@@ -376,7 +385,15 @@ export function FacturacionModule() {
                       <TableCell>{formatDate(pago.fechaPago)}</TableCell>
                       <TableCell className="font-medium">{pago.clienteNombreCompleto}</TableCell>
                       <TableCell>{currencyFormatter.format(pago.monto)}</TableCell>
-                      <TableCell>{metodoLabel[pago.metodo]}</TableCell>
+                      <TableCell>
+                        {pago.metodo === "mixto" ? (
+                          <span title={pago.metodos.map((m) => `${metodoLabel[m.metodo]}: ${currencyFormatter.format(m.monto)}`).join(" · ")}>
+                            Mixto ({pago.metodos.map((m) => currencyFormatter.format(m.monto)).join(" + ")})
+                          </span>
+                        ) : (
+                          metodoLabel[pago.metodo]
+                        )}
+                      </TableCell>
                       <TableCell>{pago.usuarioNombre || "—"}</TableCell>
                       <TableCell>
                         {pago.anulado ? (
@@ -448,8 +465,20 @@ export function FacturacionModule() {
           <PorVencerTab onCobroRegistrado={fetchStats} />
         </TabsContent>
 
+        {puedeVerCaja && (
+          <TabsContent value="egresos">
+            <EgresosTab />
+          </TabsContent>
+        )}
+
+        {puedeVerCaja && (
+          <TabsContent value="caja-inicial">
+            <CajaAperturaTab />
+          </TabsContent>
+        )}
+
         <TabsContent value="cierre-caja">
-          <CierreCajaTab />
+          {puedeVerCaja ? <CierreCajaTab /> : <CierreCajaCuotasTab />}
         </TabsContent>
       </Tabs>
 

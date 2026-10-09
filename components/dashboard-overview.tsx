@@ -27,6 +27,8 @@ interface DashboardStats {
   morosos: number
   nuevosMes: number
   proximosVencimientos: ProximoVencimiento[]
+  ventasHoyTotal?: number
+  ventasHoyCantidad?: number
 }
 
 interface FacturacionStats {
@@ -171,19 +173,38 @@ export function DashboardOverview() {
         ))}
       </div>
 
-      <Card className="max-w-xs">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-            Nuevos este mes
-          </CardTitle>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-            <UserPlus className="size-4" />
-          </span>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold">{stats.nuevosMes}</div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+              Nuevos este mes
+            </CardTitle>
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <UserPlus className="size-4" />
+            </span>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats.nuevosMes}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+              Ventas de hoy
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            <div className="text-3xl font-bold">
+              {stats.ventasHoyTotal === undefined ? "—" : currencyFormatter.format(stats.ventasHoyTotal)}
+            </div>
+            {stats.ventasHoyCantidad !== undefined && (
+              <p className="text-xs text-muted-foreground">
+                {stats.ventasHoyCantidad} venta{stats.ventasHoyCantidad === 1 ? "" : "s"}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>

@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ChevronLeft, Loader2, Search } from "lucide-react"
 
+import { SelectorMedioPago } from "@/components/selector-medio-pago"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -16,13 +17,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import type { Cliente } from "@/lib/types"
 import { aplicarErrorBackend, cobroSchema, montoFilter, withCharFilter, type CobroFormValues } from "@/lib/validations"
@@ -30,12 +24,6 @@ import { getClientes } from "@/services/clientes"
 import { registrarPago } from "@/services/pagos"
 
 const DEFAULT_MONTO = 45000
-
-const metodoOptions = [
-  { value: "efectivo", label: "Efectivo" },
-  { value: "tarjeta", label: "Tarjeta" },
-  { value: "transferencia", label: "Transferencia" },
-]
 
 interface RegistrarPagoDialogProps {
   open: boolean
@@ -55,20 +43,26 @@ export function RegistrarPagoDialog({ open, onOpenChange, onSuccess }: Registrar
     register,
     handleSubmit,
     reset,
-    control,
+    watch,
+    setValue,
     setError,
     formState: { errors },
   } = useForm<CobroFormValues>({
     resolver: zodResolver(cobroSchema),
-    defaultValues: { monto: DEFAULT_MONTO, metodo: "efectivo" },
+    defaultValues: { monto: DEFAULT_MONTO, metodoPago: undefined },
   })
+
+  const monto = watch("monto") || 0
+  const metodoPago = watch("metodoPago")
+  const montoEfectivo = watch("montoEfectivo")
+  const montoTransferencia = watch("montoTransferencia")
 
   if (open !== prevOpen) {
     setPrevOpen(open)
     if (open) {
       setBusqueda("")
       setSeleccionado(null)
-      reset({ monto: DEFAULT_MONTO, metodo: "efectivo" })
+      reset({ monto: DEFAULT_MONTO, metodoPago: undefined })
     }
   }
 
@@ -97,7 +91,20 @@ export function RegistrarPagoDialog({ open, onOpenChange, onSuccess }: Registrar
     if (!seleccionado) return
     setLoading(true)
     try {
-      await registrarPago({ clienteId: seleccionado.idCliente, monto: values.monto, metodo: values.metodo })
+      const body =
+        values.metodoPago === "dividido"
+          ? {
+              clienteId: seleccionado.idCliente,
+              monto: values.monto,
+              pagos: [
+                ...(values.montoEfectivo ? [{ metodo: "efectivo" as const, monto: values.montoEfectivo }] : []),
+                ...(values.montoTransferencia
+                  ? [{ metodo: "transferencia" as const, monto: values.montoTransferencia }]
+                  : []),
+              ],
+            }
+          : { clienteId: seleccionado.idCliente, monto: values.monto, metodo: values.metodoPago }
+      await registrarPago(body)
       toast({ title: "Pago registrado", description: seleccionado.nombreCompleto })
       onOpenChange(false)
       onSuccess()
@@ -183,26 +190,20 @@ export function RegistrarPagoDialog({ open, onOpenChange, onSuccess }: Registrar
               {errors.monto && <p className="text-sm text-destructive">{errors.monto.message}</p>}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="metodo">Método de pago *</Label>
-              <Controller
-                name="metodo"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="metodo" className="w-full" aria-invalid={!!errors.metodo}>
-                      <SelectValue placeholder="Seleccioná un método" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {metodoOptions.map(({ value, label }) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+              <Label>Método de pago *</Label>
+              <SelectorMedioPago
+                total={monto}
+                metodo={metodoPago}
+                montoEfectivo={montoEfectivo}
+                montoTransferencia={montoTransferencia}
+                onMetodoChange={(m) => setValue("metodoPago", m, { shouldValidate: true })}
+                onMontoEfectivoChange={(v) => setValue("montoEfectivo", v, { shouldValidate: true })}
+                onMontoTransferenciaChange={(v) => setValue("montoTransferencia", v, { shouldValidate: true })}
+                errorMetodo={errors.metodoPago?.message}
+                errorMontoEfectivo={errors.montoEfectivo?.message}
+                errorMontoTransferencia={errors.montoTransferencia?.message}
+                disabled={loading}
               />
-              {errors.metodo && <p className="text-sm text-destructive">{errors.metodo.message}</p>}
             </div>
 
             <DialogFooter>

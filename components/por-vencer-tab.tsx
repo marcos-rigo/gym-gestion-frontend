@@ -65,13 +65,16 @@ export function PorVencerTab({ onCobroRegistrado }: PorVencerTabProps) {
   const [query, setQuery] = useState("")
   const [cobrando, setCobrando] = useState<ClientePorVencer | null>(null)
 
+  // Sin el early return, al montar se resetea a la página 1 a los 300 ms y pisa un "Siguiente" hecho antes.
   useEffect(() => {
+    const next = queryInput.trim()
+    if (next === query) return
     const t = setTimeout(() => {
-      setQuery(queryInput.trim())
+      setQuery(next)
       setPage(1)
     }, 300)
     return () => clearTimeout(t)
-  }, [queryInput])
+  }, [queryInput, query])
 
   const fetchPorVencer = useCallback(() => {
     getPorVencer({ query: query || undefined, page, pageSize: PAGE_SIZE })

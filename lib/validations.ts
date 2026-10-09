@@ -17,6 +17,11 @@ export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 export const MONTO_MAX = 99999999.99
 export const FECHA_MIN_NACIMIENTO = "1900-01-01"
 
+// Espejo exacto de NOMBRE_PRODUCTO_RE en backend/src/utils/validators.js: letras y
+// números separados por un único espacio (sin guion ni apóstrofe).
+export const NOMBRE_PRODUCTO_CHARS = "A-Za-zÀ-ÖØ-öø-ÿ0-9\\s"
+export const NOMBRE_PRODUCTO_REGEX = /^[\p{L}\p{N}]+(?: [\p{L}\p{N}]+)*$/u
+
 // ---------------------------------------------------------------------------
 // Schemas de campo reutilizables
 // ---------------------------------------------------------------------------
@@ -61,6 +66,19 @@ export const montoSchema = z.coerce
   .positive("El monto debe ser mayor a cero")
   .max(MONTO_MAX, "El monto es demasiado grande")
   .refine((v) => MONTO_REGEX.test(String(v)), "El monto admite como máximo 2 decimales")
+
+/** Igual que montoSchema pero permite 0 (ej. caja inicial en cero). */
+export const montoNoNegativoSchema = z.coerce
+  .number({ invalid_type_error: "Ingresá un monto válido" })
+  .min(0, "No puede ser negativo")
+  .max(MONTO_MAX, "El monto es demasiado grande")
+  .refine((v) => MONTO_REGEX.test(String(v)), "El monto admite como máximo 2 decimales")
+
+export const productoNombreSchema = z
+  .string()
+  .transform((v) => v.trim().replace(/\s+/g, " "))
+  .refine((v) => v.length >= 2 && v.length <= 60, "Debe tener entre 2 y 60 caracteres")
+  .refine((v) => NOMBRE_PRODUCTO_REGEX.test(v), "Solo puede contener letras, números y espacios")
 
 export const fechaNacimientoSchema = z
   .string()
@@ -117,16 +135,43 @@ export const roleSchema = z.object({
 
 export type RoleFormValues = z.infer<typeof roleSchema>
 
-export const cobroSchema = z.object({
-  monto: montoSchema,
-  metodo: z.enum(["efectivo", "tarjeta", "transferencia"], {
-    errorMap: () => ({ message: "Seleccioná un método de pago" }),
-  }),
-})
+export const METODOS_PAGO_CUOTA = ["efectivo", "transferencia", "dividido"] as const
+
+export const cobroSchema = z
+  .object({
+    monto: montoSchema,
+    metodoPago: z.enum(METODOS_PAGO_CUOTA, {
+      errorMap: () => ({ message: "Seleccioná un método de pago" }),
+    }),
+    montoEfectivo: z.coerce.number().min(0, "No puede ser negativo").optional(),
+    montoTransferencia: z.coerce.number().min(0, "No puede ser negativo").optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.metodoPago !== "dividido") return
+    const efectivo = data.montoEfectivo ?? 0
+    const transferencia = data.montoTransferencia ?? 0
+    if (efectivo <= 0 && transferencia <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Ingresá al menos un monto",
+        path: ["montoEfectivo"],
+      })
+      return
+    }
+    const suma = Math.round((efectivo + transferencia) * 100) / 100
+    if (Math.abs(suma - data.monto) > 0.01) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "La suma de ambos montos debe ser igual al total",
+        path: ["montoTransferencia"],
+      })
+    }
+  })
 
 export type CobroFormValues = z.infer<typeof cobroSchema>
 
-export const anularPagoSchema = z.object({
+/** Reutilizado por cualquier anulación con motivo: pagos, ventas, movimientos de caja. */
+export const anulacionSchema = z.object({
   motivo: z
     .string()
     .trim()
@@ -134,7 +179,63 @@ export const anularPagoSchema = z.object({
     .max(300, "El motivo no puede superar los 300 caracteres"),
 })
 
-export type AnularPagoFormValues = z.infer<typeof anularPagoSchema>
+export const anularPagoSchema = anulacionSchema
+
+export type AnularPagoFormValues = z.infer<typeof anulacionSchema>
+
+// ---------------------------------------------------------------------------
+// Productos
+// ---------------------------------------------------------------------------
+
+export const productoSchema = z.object({
+  nombre: productoNombreSchema,
+  descripcion: z.string().trim().max(200, "Debe tener máximo 200 caracteres").optional().or(z.literal("")),
+  categoria: z.string().trim().max(50, "Debe tener máximo 50 caracteres").optional().or(z.literal("")),
+  precio: montoSchema,
+  controlaStock: z.boolean(),
+  stockActual: z.coerce
+    .number({ invalid_type_error: "Ingresá un número" })
+    .int("Debe ser un número entero")
+    .min(0, "No puede ser negativo")
+    .optional(),
+  stockMinimo: z.coerce
+    .number({ invalid_type_error: "Ingresá un número" })
+    .int("Debe ser un número entero")
+    .min(0, "No puede ser negativo")
+    .optional(),
+})
+
+export type ProductoFormValues = z.infer<typeof productoSchema>
+
+export const ajustarStockSchema = z.object({
+  delta: z.coerce
+    .number({ invalid_type_error: "Ingresá un número" })
+    .int("Debe ser un número entero")
+    .refine((v) => v !== 0, "El ajuste no puede ser cero"),
+  motivo: z.string().trim().max(300, "Debe tener máximo 300 caracteres").optional().or(z.literal("")),
+})
+
+export type AjustarStockFormValues = z.infer<typeof ajustarStockSchema>
+
+// ---------------------------------------------------------------------------
+// Caja: egresos/ingresos extra y apertura
+// ---------------------------------------------------------------------------
+
+export const movimientoCajaSchema = z.object({
+  concepto: z.string().trim().min(2, "Debe tener al menos 2 caracteres").max(100, "Debe tener máximo 100 caracteres"),
+  monto: montoSchema,
+  metodo: z.enum(["efectivo", "transferencia"], {
+    errorMap: () => ({ message: "Seleccioná un método de pago" }),
+  }),
+})
+
+export type MovimientoCajaFormValues = z.infer<typeof movimientoCajaSchema>
+
+export const cajaAperturaSchema = z.object({
+  montoInicialEfectivo: montoNoNegativoSchema,
+})
+
+export type CajaAperturaFormValues = z.infer<typeof cajaAperturaSchema>
 
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().min(1, "El email es obligatorio").email("Ingresá un email válido"),

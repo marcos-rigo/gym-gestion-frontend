@@ -64,12 +64,23 @@ describe("CobroDialog", () => {
     expect(registrarPagoMock).not.toHaveBeenCalled()
   })
 
+  it("exige elegir un método de pago antes de registrar", async () => {
+    const user = userEvent.setup()
+    renderDialog()
+
+    await user.click(screen.getByRole("button", { name: "Registrar cobro" }))
+
+    expect(await screen.findByText("Seleccioná un método de pago")).toBeInTheDocument()
+    expect(registrarPagoMock).not.toHaveBeenCalled()
+  })
+
   it("registra un cobro válido con el monto por defecto y método efectivo", async () => {
     registrarPagoMock.mockResolvedValue({ periodoHasta: "2026-12-07" })
     const user = userEvent.setup()
     const { onSuccess } = renderDialog()
 
     expect(screen.getByLabelText("Monto *")).toHaveValue("45000")
+    await user.click(screen.getByRole("button", { name: "Efectivo" }))
     await user.click(screen.getByRole("button", { name: "Registrar cobro" }))
 
     await waitFor(() =>
@@ -78,17 +89,51 @@ describe("CobroDialog", () => {
     expect(onSuccess).toHaveBeenCalled()
   })
 
-  it("permite elegir otro método de pago", async () => {
+  it("permite elegir transferencia", async () => {
     registrarPagoMock.mockResolvedValue({})
     const user = userEvent.setup()
     renderDialog()
 
-    await user.click(screen.getByLabelText("Método de pago *"))
-    await user.click(await screen.findByRole("option", { name: "Tarjeta" }))
+    await user.click(screen.getByRole("button", { name: "Transferencia" }))
     await user.click(screen.getByRole("button", { name: "Registrar cobro" }))
 
     await waitFor(() =>
-      expect(registrarPagoMock).toHaveBeenCalledWith({ clienteId: "c1", monto: 45000, metodo: "tarjeta" })
+      expect(registrarPagoMock).toHaveBeenCalledWith({ clienteId: "c1", monto: 45000, metodo: "transferencia" })
+    )
+  })
+
+  it("un pago dividido que no suma el total muestra error y no registra", async () => {
+    const user = userEvent.setup()
+    renderDialog()
+
+    await user.click(screen.getByRole("button", { name: "Dividido" }))
+    // Total es $45.000; al poner más en efectivo que el total, el resto se clampea a 0
+    // en vez de ir negativo, así que la suma termina sin igualar el total.
+    await user.type(screen.getByLabelText("Efectivo"), "50000")
+    await user.click(screen.getByRole("button", { name: "Registrar cobro" }))
+
+    expect(await screen.findByText("La suma de ambos montos debe ser igual al total")).toBeInTheDocument()
+    expect(registrarPagoMock).not.toHaveBeenCalled()
+  })
+
+  it("un pago dividido que sí suma el total se registra con `pagos`", async () => {
+    registrarPagoMock.mockResolvedValue({})
+    const user = userEvent.setup()
+    renderDialog()
+
+    await user.click(screen.getByRole("button", { name: "Dividido" }))
+    await user.type(screen.getByLabelText("Efectivo"), "20000")
+    await user.click(screen.getByRole("button", { name: "Registrar cobro" }))
+
+    await waitFor(() =>
+      expect(registrarPagoMock).toHaveBeenCalledWith({
+        clienteId: "c1",
+        monto: 45000,
+        pagos: [
+          { metodo: "efectivo", monto: 20000 },
+          { metodo: "transferencia", monto: 25000 },
+        ],
+      })
     )
   })
 
@@ -98,6 +143,7 @@ describe("CobroDialog", () => {
     const user = userEvent.setup()
     renderDialog()
 
+    await user.click(screen.getByRole("button", { name: "Efectivo" }))
     await user.click(screen.getByRole("button", { name: "Registrar cobro" }))
 
     await waitFor(() =>
@@ -115,6 +161,7 @@ describe("CobroDialog", () => {
     const user = userEvent.setup()
     renderDialog()
 
+    await user.click(screen.getByRole("button", { name: "Efectivo" }))
     await user.click(screen.getByRole("button", { name: "Registrar cobro" }))
 
     expect(await screen.findByRole("button", { name: "Registrando..." })).toBeDisabled()
