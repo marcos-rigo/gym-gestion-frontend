@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Ban, Loader2, Plus, Search, TrendingDown, TrendingUp } from "lucide-react"
+import { Ban, FileDown, Loader2, Plus, Search, TrendingDown, TrendingUp } from "lucide-react"
 
 import { AnularPagoDialog } from "@/components/anular-pago-dialog"
 import { CajaAperturaTab } from "@/components/caja-apertura-tab"
@@ -10,6 +10,7 @@ import { CierreCajaTab } from "@/components/cierre-caja-tab"
 import { EgresosTab } from "@/components/egresos-tab"
 import { MorososTab } from "@/components/morosos-tab"
 import { PorVencerTab } from "@/components/por-vencer-tab"
+import { RecaudacionPdfDialog } from "@/components/recaudacion-pdf-dialog"
 import { RegistrarPagoDialog } from "@/components/registrar-pago-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -118,6 +119,7 @@ export function FacturacionModule() {
   const [clienteQuery, setClienteQuery] = useState("")
 
   const [showRegistrar, setShowRegistrar] = useState(false)
+  const [showPdf, setShowPdf] = useState(false)
   const [anulando, setAnulando] = useState<Pago | null>(null)
   const [empleadosVistos, setEmpleadosVistos] = useState<Map<string, string>>(new Map())
 
@@ -240,12 +242,18 @@ export function FacturacionModule() {
           <h1 className="text-2xl font-bold font-display uppercase tracking-tight">Facturación</h1>
           <p className="text-sm text-muted-foreground">Movimientos, cobros y anulaciones.</p>
         </div>
-        {puedeCobrar && (
-          <Button onClick={() => setShowRegistrar(true)}>
-            <Plus />
-            Registrar Pago
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setShowPdf(true)}>
+            <FileDown />
+            Descargar PDF
           </Button>
-        )}
+          {puedeCobrar && (
+            <Button onClick={() => setShowRegistrar(true)}>
+              <Plus />
+              Registrar Pago
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -568,6 +576,8 @@ export function FacturacionModule() {
       </Tabs>
 
       <RegistrarPagoDialog open={showRegistrar} onOpenChange={setShowRegistrar} onSuccess={handleSuccess} />
+
+      <RecaudacionPdfDialog open={showPdf} onOpenChange={setShowPdf} />
 
       <AnularPagoDialog
         pago={anulando}

@@ -2,6 +2,8 @@ import { z } from "zod"
 import type { FieldValues, Path, UseFormSetError } from "react-hook-form"
 import type { ChangeEvent, KeyboardEvent } from "react"
 
+import { hoyTucuman } from "@/lib/utils"
+
 // ---------------------------------------------------------------------------
 // Expresiones regulares compartidas
 // ---------------------------------------------------------------------------
@@ -87,6 +89,13 @@ export const fechaNacimientoSchema = z
   .refine((v) => !v || new Date(v) <= new Date(), "La fecha de nacimiento no puede ser futura")
   .refine((v) => !v || v >= FECHA_MIN_NACIMIENTO, "La fecha de nacimiento no es válida")
 
+// Comparación de strings YYYY-MM-DD contra "hoy" en la zona del gimnasio (el mismo valor
+// que el `max` del <input type="date">), no contra el new Date() del browser.
+export const fechaAltaSchema = z
+  .string()
+  .min(1, "Ingresá la fecha de alta")
+  .refine((v) => v <= hoyTucuman(), "La fecha de alta no puede ser futura")
+
 // ---------------------------------------------------------------------------
 // Schemas por formulario
 // ---------------------------------------------------------------------------
@@ -102,7 +111,11 @@ export const clienteSchema = z.object({
   contactoEmergencia: z.string().trim().max(100, "Debe tener máximo 100 caracteres").optional(),
   observaciones: z.string().trim().max(500, "Debe tener máximo 500 caracteres").optional(),
   fotoUrl: z.string().optional(),
+  // Solo se carga al crear (ver clienteCreateSchema); en la edición no se muestra ni se envía.
+  fechaAlta: z.string().optional(),
 })
+
+export const clienteCreateSchema = clienteSchema.extend({ fechaAlta: fechaAltaSchema })
 
 export type ClienteFormValues = z.infer<typeof clienteSchema>
 

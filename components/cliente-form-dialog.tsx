@@ -19,8 +19,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import type { Cliente } from "@/lib/types"
+import { hoyTucuman } from "@/lib/utils"
 import {
   aplicarErrorBackend,
+  clienteCreateSchema,
   clienteSchema,
   digitosFilter,
   letrasFilter,
@@ -51,6 +53,7 @@ function toDefaults(cliente?: Cliente | null): ClienteFormValues {
       contactoEmergencia: "",
       observaciones: "",
       fotoUrl: "",
+      fechaAlta: hoyTucuman(),
     }
   }
   return {
@@ -92,7 +95,7 @@ export function ClienteFormDialog({
     setError,
     formState: { errors },
   } = useForm<ClienteFormValues>({
-    resolver: zodResolver(clienteSchema),
+    resolver: zodResolver(isEdit ? clienteSchema : clienteCreateSchema),
     defaultValues: toDefaults(initialData),
   })
 
@@ -169,11 +172,14 @@ export function ClienteFormDialog({
 
   async function onSubmit(values: ClienteFormValues) {
     // Los campos opcionales vacíos se envían como null (el backend no acepta "" en fechas)
+    // fechaAlta solo viaja en el alta: la edición no la expone.
     const payload = Object.fromEntries(
-      Object.entries(values).map(([key, value]) => [
-        key,
-        typeof value === "string" && value.trim() === "" ? null : value,
-      ])
+      Object.entries(values)
+        .filter(([key]) => !(isEdit && key === "fechaAlta"))
+        .map(([key, value]) => [
+          key,
+          typeof value === "string" && value.trim() === "" ? null : value,
+        ])
     )
 
     setLoading(true)
@@ -332,6 +338,19 @@ export function ClienteFormDialog({
                 <p className="text-sm text-destructive">{errors.contactoEmergencia.message}</p>
               )}
             </div>
+            {!isEdit && (
+              <div className="grid gap-1">
+                <Label htmlFor="fechaAlta">Fecha de alta *</Label>
+                <Input
+                  id="fechaAlta"
+                  type="date"
+                  max={hoyTucuman()}
+                  {...register("fechaAlta")}
+                  aria-invalid={!!errors.fechaAlta}
+                />
+                {errors.fechaAlta && <p className="text-sm text-destructive">{errors.fechaAlta.message}</p>}
+              </div>
+            )}
           </div>
 
           <div className="grid gap-1">
